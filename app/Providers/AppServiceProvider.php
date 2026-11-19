@@ -11,6 +11,7 @@ use OGame\Factories\PlanetServiceFactory;
 use OGame\Factories\PlayerServiceFactory;
 use OGame\Models\User;
 use OGame\Observers\UserObserver;
+use OGame\Services\Hero\HeroEffectsResolver;
 use OGame\Services\SettingsService;
 
 class AppServiceProvider extends ServiceProvider
@@ -60,5 +61,8 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(ExceptionHandler::class, Handler::class);
+
+        // Kalendrath: per-request cache of hero effects (safe under Octane).
+        $this->app->scoped(HeroEffectsResolver::class);
     }
 }

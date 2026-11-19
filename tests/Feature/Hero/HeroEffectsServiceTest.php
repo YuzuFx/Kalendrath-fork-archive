@@ -2,19 +2,21 @@
 
 namespace Tests\Feature\Hero;
 
-use OGame\Enums\EquipmentRarity;
 use OGame\Enums\HeroArchetype;
+use OGame\Enums\HeroRole;
 use OGame\Enums\TalentEffectScope;
-use OGame\Models\EquipmentItem;
 use OGame\Models\Hero;
-use OGame\Models\HeroEquipment;
 use OGame\Models\HeroTalent;
 use OGame\Services\Hero\HeroEffectsService;
 use OGame\Services\Hero\HeroEquipmentService;
 use OGame\Services\Hero\HeroRosterService;
+use OGame\Services\Items\ItemCatalogService;
+use Tests\Feature\Items\ItemFixtures;
 
 class HeroEffectsServiceTest extends HeroTestCase
 {
+    use ItemFixtures;
+
     private function invest(Hero $hero, string $type, float $value, TalentEffectScope $scope, int $rank = 1): void
     {
         $node = $this->node([
@@ -27,18 +29,17 @@ class HeroEffectsServiceTest extends HeroTestCase
         HeroTalent::create(['hero_id' => $hero->id, 'talent_node_id' => $node->id, 'rank' => $rank]);
     }
 
-    private function wear(Hero $hero, string $slot, string $type, float $value, TalentEffectScope $scope): void
+    private function wear(Hero $hero, string $slot, string $type, float $value, TalentEffectScope $scope, string $target = '*'): void
     {
-        $item = EquipmentItem::create([
-            'name' => 'Item ' . $slot,
-            'slot' => $slot,
-            'rarity' => EquipmentRarity::RARE->value,
-            'effect_type' => $type,
-            'effect_value' => $value,
-            'effect_scope' => $scope,
+        $definition = $this->definition($this->code($slot, $type, $scope, $target), $slot, 'any', [
+            ['type' => $type, 'scope' => $scope->value, 'target' => $target, 'value' => $value],
         ]);
-        $owned = HeroEquipment::create(['hero_id' => $hero->id, 'equipment_item_id' => $item->id]);
-        resolve(HeroEquipmentService::class)->equip($hero, $owned);
+        resolve(HeroEquipmentService::class)->equip($hero, $this->give($hero->user_id, $definition));
+    }
+
+    private function code(string $slot, string $type, TalentEffectScope $scope, string $target): string
+    {
+        return substr('test_' . $slot . '_' . $scope->value . '_' . str_replace('*', 'all', $target) . '_' . $type, 0, 64);
     }
 
     public function testHeroWithoutTalentsOrEquipmentHasNoEffect(): void
@@ -58,11 +59,9 @@ class HeroEffectsServiceTest extends HeroTestCase
     public function testEquippedItemsCountButInventoryItemsDoNot(): void
     {
         $this->wear($this->hero, 'head', 'loot_bonus_percent', 5, TalentEffectScope::HERO);
-        $item = EquipmentItem::create([
-            'name' => 'Bag', 'slot' => 'chest', 'rarity' => 1,
-            'effect_type' => 'loot_bonus_percent', 'effect_value' => 20, 'effect_scope' => TalentEffectScope::HERO,
-        ]);
-        HeroEquipment::create(['hero_id' => $this->hero->id, 'equipment_item_id' => $item->id]);
+        $this->give($this->user->id, $this->definition('test_bag', 'chest', 'any', [
+            ['type' => 'loot_bonus_percent', 'scope' => 'hero', 'value' => 20],
+        ]));
 
         $effects = resolve(HeroEffectsService::class)->forHero($this->hero);
 
@@ -148,5 +147,41 @@ class HeroEffectsServiceTest extends HeroTestCase
         $this->invest($advisor, 'loot_bonus_percent', 5, TalentEffectScope::HERO);
 
         $this->assertSame([], resolve(HeroEffectsService::class)->forEmpire($this->user));
+    }
+
+    public function testCityCapAppliesOnceOnTheFinalTotalAcrossScopes(): void
+    {
+        // 8 city + 8 empire would be 16 if each scope were capped separately.
+        $this->invest($this->hero, 'production_bonus_percent', 8, TalentEffectScope::EMPIRE);
+        $this->wear($this->hero, 'head', 'production_bonus_percent', 8, TalentEffectScope::CITY);
+        $service = resolve(HeroEffectsService::class);
+        $components = $service->cityComponents([[
+            'role' => HeroRole::MAIN, 'planet_id' => 42,
+            'effects' => $service->rawForHero($this->hero),
+        ]], 42);
+
+        $this->assertEqualsWithDelta(10.0, $service->finalValue($components, 'production_bonus_percent', 'metal'), 0.001);
+    }
+
+    public function testTargetedEffectsAddToWholeAxisEffectsForTheirTargetOnly(): void
+    {
+        $this->invest($this->hero, 'production_bonus_percent', 2, TalentEffectScope::EMPIRE);
+        $this->wear($this->hero, 'head', 'production_bonus_percent', 3, TalentEffectScope::EMPIRE, 'metal');
+        $service = resolve(HeroEffectsService::class);
+        $components = $service->cityComponents($service->kingdom($this->user->id), 0);
+
+        $this->assertEqualsWithDelta(5.0, $service->finalValue($components, 'production_bonus_percent', 'metal'), 0.001);
+        $this->assertEqualsWithDelta(2.0, $service->finalValue($components, 'production_bonus_percent', 'crystal'), 0.001);
+    }
+
+    public function testRebalancingADefinitionChangesEveryWornCopy(): void
+    {
+        $this->wear($this->hero, 'head', 'loot_bonus_percent', 5, TalentEffectScope::HERO);
+        resolve(ItemCatalogService::class)->upsert($this->code('head', 'loot_bonus_percent', TalentEffectScope::HERO, '*'), [
+            'kind' => 'equipment', 'slot_type' => 'head', 'equip_class' => 'any',
+            'effects' => [['type' => 'loot_bonus_percent', 'scope' => 'hero', 'target' => '*', 'value' => 2]],
+        ]);
+
+        $this->assertEqualsWithDelta(2.0, resolve(HeroEffectsService::class)->forHero($this->hero)['hero']['loot_bonus_percent'], 0.001);
     }
 }

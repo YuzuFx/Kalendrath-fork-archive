@@ -21,12 +21,27 @@ return [
         // the hero's own ceiling on that axis. GDD: one third to one half, TBD.
         'axis_cap_ratio' => 0.5,
 
-        // Equipment slots available to an advisor ("lighter inventory",
-        // detail TBD in the GDD): all eight until decided.
+        // Equipment positions available to an advisor ("lighter inventory",
+        // detail TBD in the GDD): all twelve until decided (2026-11-19).
         'slots' => [
-            'head', 'chest', 'hands', 'belt', 'legs', 'boots', 'weapon_main_hand', 'weapon_off_hand',
+            'head', 'neck', 'shoulders', 'cloak', 'chest', 'wrists', 'hands', 'belt', 'legs', 'boots', 'ring_1', 'ring_2',
         ],
     ],
+
+    /*
+     * Equipment classes each archetype may wear (EquipClass). Adding an
+     * archetype is one line here, not a review of the item catalog. An
+     * archetype missing from this list may only wear "any" items.
+     * Provisional values (classes to be validated by Gregory).
+     */
+    'archetypes' => [
+        'warrior' => ['equip_classes' => ['heavy', 'any']],
+        'sorcerer' => ['equip_classes' => ['arcane', 'any']],
+    ],
+
+    // Archetypes of the alpha: a kingdom without a main hero draws loot from
+    // the union of their classes.
+    'alpha_archetypes' => ['warrior', 'sorcerer'],
 
     /*
      * Ceiling of a hero's total bonus per effect axis (talents + equipment),

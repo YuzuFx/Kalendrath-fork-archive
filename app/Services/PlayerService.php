@@ -18,6 +18,7 @@ use OGame\Models\Resources;
 use OGame\Models\UnitQueue;
 use OGame\Models\User;
 use OGame\Models\UserTech;
+use OGame\Services\Items\KingdomPurgeService;
 use RuntimeException;
 use Throwable;
 
@@ -901,6 +902,9 @@ class PlayerService
      */
     public function delete(): void
     {
+        // Kalendrath: items and heroes first, their foreign keys block the deletion.
+        app(KingdomPurgeService::class)->purge($this->getId());
+
         // Include destroyed planets still awaiting purge so related rows are cleaned up.
         $planetIds = Planet::where('user_id', $this->getId())->pluck('id');
 

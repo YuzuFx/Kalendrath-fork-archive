@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -31,32 +32,28 @@ use OGame\Enums\HeroRole;
  * @property int $armor
  * @property int $life
  */
+#[Fillable([
+    'user_id',
+    'planet_id',
+    'name',
+    'avatar',
+    'archetype',
+    'role',
+    'main_marker',
+    'level',
+    'xp',
+    'talent_points_spent',
+    'status',
+    'strength',
+    'intelligence',
+    'willpower',
+    'dexterity',
+    'attack_power',
+    'armor',
+    'life',
+])]
 class Hero extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'user_id',
-        'planet_id',
-        'name',
-        'avatar',
-        'archetype',
-        'role',
-        'main_marker',
-        'level',
-        'xp',
-        'talent_points_spent',
-        'status',
-        'strength',
-        'intelligence',
-        'willpower',
-        'dexterity',
-        'attack_power',
-        'armor',
-        'life',
-    ];
-
     /**
      * @return array<string, string>
      */
@@ -98,12 +95,24 @@ class Hero extends Model
     }
 
     /**
-     * This hero's owned equipment (equipped + inventory).
+     * Legacy demo equipment (hero_equipment), superseded by kingdom_items on
+     * 2026-11-19; the table is dropped once the React hero screen ships.
      *
+     * @deprecated use equippedItems() and the kingdom inventory
      * @return HasMany<HeroEquipment, $this>
      */
     public function equipment(): HasMany
     {
         return $this->hasMany(HeroEquipment::class);
+    }
+
+    /**
+     * Kingdom items this hero wears (the kingdom owns them).
+     *
+     * @return HasMany<KingdomItem, $this>
+     */
+    public function equippedItems(): HasMany
+    {
+        return $this->hasMany(KingdomItem::class, 'holder_hero_id');
     }
 }

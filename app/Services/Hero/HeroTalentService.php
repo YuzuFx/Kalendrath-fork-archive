@@ -17,8 +17,10 @@ use OGame\Services\HeroLevelingService;
  */
 class HeroTalentService
 {
-    public function __construct(private readonly HeroLevelingService $leveling)
-    {
+    public function __construct(
+        private readonly HeroLevelingService $leveling,
+        private readonly HeroEffectsChanged $effectsChanged,
+    ) {
     }
 
     /**
@@ -40,6 +42,12 @@ class HeroTalentService
      * @return HeroTalent
      */
     public function allocate(Hero $hero, TalentNode $node): HeroTalent
+    {
+        // A talent may change the production: settle, allocate, recalculate.
+        return $this->effectsChanged->apply($hero->user_id, fn (): HeroTalent => $this->allocateInner($hero, $node));
+    }
+
+    private function allocateInner(Hero $hero, TalentNode $node): HeroTalent
     {
         return DB::transaction(function () use ($hero, $node): HeroTalent {
             // Lock the hero row so two concurrent requests cannot overspend.
@@ -97,7 +105,7 @@ class HeroTalentService
      */
     public function respec(Hero $hero): Hero
     {
-        DB::transaction(function () use ($hero): void {
+        $this->effectsChanged->apply($hero->user_id, function () use ($hero): void {
             HeroTalent::where('hero_id', $hero->id)->delete();
             Hero::whereKey($hero->id)->update(['talent_points_spent' => 0]);
             $hero->talent_points_spent = 0;
