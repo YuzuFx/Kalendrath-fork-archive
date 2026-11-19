@@ -93,8 +93,6 @@ return [
         'item_not_equipped' => 'Ce héros ne porte pas cet objet.',
         'class_not_allowed' => 'Cet archétype ne peut pas porter ce type d\'équipement.',
         'inventory_full' => 'L\'inventaire du royaume est plein : libérez une place avant de retirer cet objet.',
-        'planet_not_owned' => 'Cette ville n\'appartient pas au royaume de ce héros.',
-        'planet_already_governed' => 'Cette ville a déjà un gouverneur.',
         'slot_not_allowed' => 'Cet emplacement n\'est pas disponible pour ce héros.',
         'level_too_low' => 'Le niveau du héros est trop bas pour cet objet.',
     ],

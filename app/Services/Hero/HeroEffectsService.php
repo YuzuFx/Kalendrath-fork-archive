@@ -5,7 +5,6 @@ namespace OGame\Services\Hero;
 use Illuminate\Support\Facades\DB;
 use OGame\Enums\HeroRole;
 use OGame\Enums\KingdomItemState;
-use OGame\Enums\TalentEffectScope;
 use OGame\Models\Hero;
 use OGame\Models\HeroTalent;
 use OGame\Models\User;
@@ -18,12 +17,20 @@ use OGame\Models\User;
  * one definition applies to every copy, decision of 2026-11-19). An effect
  * has an optional target ('*' = the whole axis).
  *
+ * No governor per city (decision of 2026-11-19): the main hero and the
+ * advisors each give their bonuses to the whole kingdom.
+ *
  * A hero's bonus stays active while on mission or unavailable (GDD 5.5), so
  * the hero's status is deliberately ignored here.
  */
 class HeroEffectsService
 {
     public const string ANY_TARGET = '*';
+
+    /**
+     * Scopes whose effects reach the whole kingdom (TalentEffectScope values).
+     */
+    public const array KINGDOM_SCOPES = ['empire', 'city'];
 
     /**
      * Uncapped effects of one hero: scope => effect_type => target => total.
@@ -88,7 +95,7 @@ class HeroEffectsService
     /**
      * Overview of one hero's effects, per scope then per effect type (all
      * targets summed), each capped by the axis ceiling. Display only: the
-     * production uses forCity(), which caps the final total.
+     * production uses forKingdom(), which caps the final total.
      *
      * @param Hero $hero
      * @return array<string, array<string, float>> scope value => effect_type => total
@@ -106,9 +113,9 @@ class HeroEffectsService
     }
 
     /**
-     * Empire-wide effects of a player (all targets summed): the main hero's
-     * empire-scoped effects plus the advisors' empire-scoped effects, the
-     * advisors' sum being limited to a fraction of the hero's own ceiling.
+     * Kingdom-wide effects of a player (all targets summed): the main hero's
+     * kingdom effects plus the advisors' kingdom effects, the advisors' sum
+     * being limited to a fraction of the hero's own ceiling.
      *
      * @param User $user
      * @return array<string, float> effect_type => total
@@ -116,7 +123,7 @@ class HeroEffectsService
     public function forEmpire(User $user): array
     {
         $total = [];
-        foreach ($this->empireComponents($this->kingdom($user->id)) as $type => $byTarget) {
+        foreach ($this->kingdomComponents($this->kingdom($user->id)) as $type => $byTarget) {
             $total[$type] = $this->capped($type, array_sum($byTarget), 1.0);
         }
 
@@ -124,11 +131,11 @@ class HeroEffectsService
     }
 
     /**
-     * Loads what the effects of a kingdom depend on: its heroes (role,
-     * governed planet) and their uncapped effects. One call = three queries.
+     * Loads what the effects of a kingdom depend on: its heroes (role) and
+     * their uncapped effects. One call = three queries.
      *
      * @param int $userId
-     * @return list<array{role: HeroRole, planet_id: int|null, effects: array<string, array<string, array<string, float>>>}>
+     * @return list<array{role: HeroRole, effects: array<string, array<string, array<string, float>>>}>
      */
     public function kingdom(int $userId): array
     {
@@ -136,14 +143,13 @@ class HeroEffectsService
             return [];
         }
 
-        $heroes = Hero::where('user_id', $userId)->get(['id', 'role', 'planet_id']);
+        $heroes = Hero::where('user_id', $userId)->get(['id', 'role']);
         $raw = $this->rawForHeroes(array_values(array_map(intval(...), $heroes->pluck('id')->all())));
 
         $kingdom = [];
         foreach ($heroes as $hero) {
             $kingdom[] = [
                 'role' => $hero->role,
-                'planet_id' => $hero->planet_id,
                 'effects' => $raw[$hero->id] ?? [],
             ];
         }
@@ -152,45 +158,46 @@ class HeroEffectsService
     }
 
     /**
-     * Uncapped effects that reach one city: empire effects of the main hero,
-     * empire effects of the advisors (their sum limited to a ratio of the
-     * axis ceiling), and city effects of every hero governing this city.
+     * Uncapped effects that reach the whole kingdom (every city, every army
+     * of the kingdom): kingdom-scoped effects of the main hero, plus those of
+     * the advisors, their sum limited to a ratio of the axis ceiling.
      *
-     * @param list<array{role: HeroRole, planet_id: int|null, effects: array<string, array<string, array<string, float>>>}> $kingdom
-     * @param int $planetId
+     * There is no governor per city any more (decision of 2026-11-19): a
+     * legacy "city" scope (talent_nodes, catalog) counts kingdom-wide, like
+     * "empire". "hero" (the hero's own missions) and "group" (an army the
+     * hero accompanies, not in the alpha) never reach the kingdom.
+     *
+     * @param list<array{role: HeroRole, effects: array<string, array<string, array<string, float>>>}> $kingdom
      * @return array<string, array<string, float>> effect_type => target => total
      */
-    public function cityComponents(array $kingdom, int $planetId): array
+    public function kingdomComponents(array $kingdom): array
     {
-        $total = $this->empireComponents($kingdom);
-        $city = TalentEffectScope::CITY->value;
+        $main = [];
+        $advisors = [];
 
         foreach ($kingdom as $hero) {
-            if ($hero['planet_id'] !== $planetId) {
-                continue;
-            }
-            foreach ($hero['effects'][$city] ?? [] as $type => $byTarget) {
-                foreach ($byTarget as $target => $value) {
-                    $total[$type][$target] = ($total[$type][$target] ?? 0.0) + $value;
+            foreach (self::KINGDOM_SCOPES as $scope) {
+                foreach ($hero['effects'][$scope] ?? [] as $type => $byTarget) {
+                    foreach ($byTarget as $target => $value) {
+                        if ($hero['role'] === HeroRole::MAIN) {
+                            $main[$type][$target] = ($main[$type][$target] ?? 0.0) + $value;
+                        } else {
+                            $advisors[$type][$target] = ($advisors[$type][$target] ?? 0.0) + $value;
+                        }
+                    }
                 }
             }
         }
 
-        return $total;
-    }
+        $ratio = (float) config('heroes.advisors.axis_cap_ratio');
+        $total = $main;
+        foreach ($advisors as $type => $byTarget) {
+            foreach ($byTarget as $target => $value) {
+                $total[$type][$target] = ($total[$type][$target] ?? 0.0) + $this->capped($type, $value, $ratio);
+            }
+        }
 
-    /**
-     * Uncapped effects that reach one army: empire effects of the kingdom,
-     * plus the city effects of the governor when the army is the stationary
-     * garrison of the governed city. Moving armies (attackers, allied
-     * reinforcements) never receive city effects.
-     *
-     * @param list<array{role: HeroRole, planet_id: int|null, effects: array<string, array<string, array<string, float>>>}> $kingdom
-     * @return array<string, array<string, float>> effect_type => target => total
-     */
-    public function armyComponents(array $kingdom, int|null $garrisonPlanetId): array
-    {
-        return $garrisonPlanetId !== null ? $this->cityComponents($kingdom, $garrisonPlanetId) : $this->empireComponents($kingdom);
+        return $total;
     }
 
     /**
@@ -211,45 +218,12 @@ class HeroEffectsService
     }
 
     /**
-     * Final bonus of one city on one axis and target (uncached helper; the
+     * Final bonus of a kingdom on one axis and target (uncached helper; the
      * production goes through HeroEffectsResolver, which caches the kingdom).
      */
-    public function forCity(int $userId, int $planetId, string $effectType, string $target = self::ANY_TARGET): float
+    public function forKingdom(int $userId, string $effectType, string $target = self::ANY_TARGET): float
     {
-        return $this->finalValue($this->cityComponents($this->kingdom($userId), $planetId), $effectType, $target);
-    }
-
-    /**
-     * @param list<array{role: HeroRole, planet_id: int|null, effects: array<string, array<string, array<string, float>>>}> $kingdom
-     * @return array<string, array<string, float>> effect_type => target => total
-     */
-    private function empireComponents(array $kingdom): array
-    {
-        $empire = TalentEffectScope::EMPIRE->value;
-        $main = [];
-        $advisors = [];
-
-        foreach ($kingdom as $hero) {
-            foreach ($hero['effects'][$empire] ?? [] as $type => $byTarget) {
-                foreach ($byTarget as $target => $value) {
-                    if ($hero['role'] === HeroRole::MAIN) {
-                        $main[$type][$target] = ($main[$type][$target] ?? 0.0) + $value;
-                    } else {
-                        $advisors[$type][$target] = ($advisors[$type][$target] ?? 0.0) + $value;
-                    }
-                }
-            }
-        }
-
-        $ratio = (float) config('heroes.advisors.axis_cap_ratio');
-        $total = $main;
-        foreach ($advisors as $type => $byTarget) {
-            foreach ($byTarget as $target => $value) {
-                $total[$type][$target] = ($total[$type][$target] ?? 0.0) + $this->capped($type, $value, $ratio);
-            }
-        }
-
-        return $total;
+        return $this->finalValue($this->kingdomComponents($this->kingdom($userId)), $effectType, $target);
     }
 
     /**

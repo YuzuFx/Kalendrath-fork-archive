@@ -93,8 +93,6 @@ return [
         'item_not_equipped' => 'This hero does not wear this item.',
         'class_not_allowed' => 'This archetype cannot wear this kind of equipment.',
         'inventory_full' => 'The kingdom\'s inventory is full: free a place before taking this item off.',
-        'planet_not_owned' => 'This city does not belong to this hero\'s kingdom.',
-        'planet_already_governed' => 'This city already has a governor.',
         'slot_not_allowed' => 'This slot is not available to this hero.',
         'level_too_low' => 'The hero\'s level is too low for this item.',
     ],

@@ -577,7 +577,8 @@ class GameObjectProduction
 
     /**
      * Calculates the Kalendrath hero bonus (production_bonus_percent of the
-     * talents and equipment reaching this city, capped on the final total).
+     * talents and equipment of the kingdom, capped on the final total; same
+     * bonus in every city, no governor per city since 2026-11-19).
      * Additive on the base, like the Geologist: floor((mine + planet slot)
      * x percent / 100), per resource. Targets: metal, crystal, deuterium
      * (Wood, Iron, Mana); '*' = all three. Food (energy) is not affected.
@@ -592,7 +593,6 @@ class GameObjectProduction
         }
 
         $userId = $this->playerService->getId();
-        $planetId = $this->planetService->getPlanetId();
 
         foreach (['metal', 'crystal', 'deuterium'] as $resource) {
             $mine = $productionIndex->mine->{$resource}->get();
@@ -600,7 +600,7 @@ class GameObjectProduction
                 continue;
             }
 
-            $percent = $this->heroEffects->forCity($userId, $planetId, 'production_bonus_percent', $resource);
+            $percent = $this->heroEffects->forKingdom($userId, 'production_bonus_percent', $resource);
             if ($percent <= 0) {
                 continue;
             }

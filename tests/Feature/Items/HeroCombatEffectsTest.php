@@ -217,27 +217,22 @@ class HeroCombatEffectsTest extends IsolatedAccountTestCase
         $this->assertSame(['structural_integrity' => 4400, 'shield' => 11, 'attack' => 55], $this->stats($engine, 'defenders', 0, 'light_fighter'));
     }
 
-    public function testCatalogGarrisonItemOnlyStrengthensTheGovernedCityGarrison(): void
+    public function testCatalogGarrisonItemStrengthensTheGarrisonOfAnyCityOfTheKingdom(): void
     {
-        // shoulders_warden_pauldrons: garrison_defense_bonus_percent +2 (city).
+        // No governor per city (2026-11-19): shoulders_warden_pauldrons
+        // (garrison_defense_bonus_percent +2, kingdom-wide) reaches the
+        // garrison of whichever city of the kingdom is attacked.
         $this->wearCatalogItem($this->defenderHero, 'shoulders_warden_pauldrons');
 
-        // Not governing the attacked city: nothing.
-        $engine = $this->engine('php', ['light_fighter' => 1], ['rocket_launcher' => 1]);
-        $this->assertSame(['structural_integrity' => 2000, 'shield' => 20, 'attack' => 80], $this->stats($engine, 'defenders', 0, 'rocket_launcher'));
-
-        resolve(HeroRosterService::class)->appointGovernor($this->defenderHero, $this->defenderPlanet->getPlanetId());
-
-        // Governing it: shield and structure of every garrison unit (troops and defenses), never attack.
-        $engine = $this->engine('php', ['light_fighter' => 1], ['light_fighter' => 1]);
+        // Shield and structure of every garrison unit (troops and defenses), never attack.
+        $engine = $this->engine('php', ['light_fighter' => 1], ['rocket_launcher' => 1, 'light_fighter' => 1]);
         $this->assertSame(['structural_integrity' => 2040, 'shield' => 20, 'attack' => 80], $this->stats($engine, 'defenders', 0, 'rocket_launcher'));
         $this->assertSame(['structural_integrity' => 4080, 'shield' => 10, 'attack' => 50], $this->stats($engine, 'defenders', 0, 'light_fighter'));
     }
 
     public function testGarrisonBonusNeverReachesAnAttackingArmy(): void
     {
-        $this->talent($this->attackerHero, 'garrison_defense_bonus_percent', 10, TalentEffectScope::CITY);
-        resolve(HeroRosterService::class)->appointGovernor($this->attackerHero, $this->planetService->getPlanetId());
+        $this->talent($this->attackerHero, 'garrison_defense_bonus_percent', 10, TalentEffectScope::EMPIRE);
 
         $engine = $this->engine('php', ['light_fighter' => 1], ['rocket_launcher' => 1]);
 
@@ -254,9 +249,8 @@ class HeroCombatEffectsTest extends IsolatedAccountTestCase
         $engine = $this->engine('php', ['heavy_fighter' => 1], ['rocket_launcher' => 1]);
         $this->assertSame(['structural_integrity' => 11500, 'shield' => 28, 'attack' => 172], $this->stats($engine, 'attackers', 0, 'heavy_fighter'));
 
-        // Garrison axis: 20 (talent, city) capped at 15.
-        $this->talent($this->defenderHero, 'garrison_defense_bonus_percent', 20, TalentEffectScope::CITY);
-        resolve(HeroRosterService::class)->appointGovernor($this->defenderHero, $this->defenderPlanet->getPlanetId());
+        // Garrison axis: 20 (talent) capped at 15.
+        $this->talent($this->defenderHero, 'garrison_defense_bonus_percent', 20, TalentEffectScope::EMPIRE);
         $engine = $this->engine('php', ['heavy_fighter' => 1], ['rocket_launcher' => 1]);
         $this->assertSame(['structural_integrity' => 2300, 'shield' => 23, 'attack' => 80], $this->stats($engine, 'defenders', 0, 'rocket_launcher'));
     }
@@ -278,8 +272,7 @@ class HeroCombatEffectsTest extends IsolatedAccountTestCase
     {
         // The city owner has a strong hero; the ally who came to defend has none.
         $this->talent($this->defenderHero, 'troop_combat_bonus_percent', 10, TalentEffectScope::EMPIRE);
-        $this->talent($this->defenderHero, 'garrison_defense_bonus_percent', 10, TalentEffectScope::CITY);
-        resolve(HeroRosterService::class)->appointGovernor($this->defenderHero, $this->defenderPlanet->getPlanetId());
+        $this->talent($this->defenderHero, 'garrison_defense_bonus_percent', 10, TalentEffectScope::EMPIRE);
 
         foreach (['php', 'rust'] as $name) {
             $engine = $this->engine($name, ['light_fighter' => 1], ['heavy_fighter' => 1], ['heavy_fighter' => 1]);

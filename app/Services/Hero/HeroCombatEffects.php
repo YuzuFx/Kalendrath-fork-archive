@@ -13,11 +13,11 @@ use OGame\Services\PlayerService;
  * never those of the city owner.
  *
  * - troop_combat_bonus_percent: attack, shield and structural integrity of
- *   the troops (ships) of the army. Empire scope (and city scope for the
- *   garrison of the governed city).
+ *   the troops (ships) of every army of the kingdom.
  * - garrison_defense_bonus_percent: shield and structural integrity of every
- *   unit (troops and defenses) of the stationary garrison of the city the
- *   hero governs (city scope), only when that city is attacked.
+ *   unit (troops and defenses) of the stationary garrison of ANY city of the
+ *   kingdom, only when that city is attacked (no governor per city since
+ *   2026-11-19: the bonus is kingdom-wide).
  *
  * Each bonus is additive on the base value of the property (like research
  * and the production bonus): floor(base x % / 100), on top of the upstream
@@ -38,13 +38,13 @@ class HeroCombatEffects
      * Hero bonus percentages of one unit type in one army.
      *
      * @param int $ownerId Owner of the army (<= 0: NPC, no hero).
-     * @param int|null $garrisonPlanetId Planet whose stationary garrison this army is, NULL for any moving army.
+     * @param bool $isGarrison True for the stationary garrison of the attacked city (its owner's), false for any moving army.
      * @return array{attack: float, shield: float, structural_integrity: float}
      */
-    public function percents(int $ownerId, int|null $garrisonPlanetId, UnitObject $unit): array
+    public function percents(int $ownerId, bool $isGarrison, UnitObject $unit): array
     {
         $none = ['attack' => 0.0, 'shield' => 0.0, 'structural_integrity' => 0.0];
-        $components = $this->resolver->forArmy($ownerId, $garrisonPlanetId);
+        $components = $this->resolver->forArmy($ownerId);
         if ($components === []) {
             return $none;
         }
@@ -52,7 +52,7 @@ class HeroCombatEffects
         $troop = $unit->type === GameObjectType::Ship
             ? $this->effects->finalValue($components, self::TROOP_COMBAT, $unit->machine_name)
             : 0.0;
-        $garrison = $garrisonPlanetId !== null
+        $garrison = $isGarrison
             ? $this->effects->finalValue($components, self::GARRISON_DEFENSE, $unit->machine_name)
             : 0.0;
 
@@ -69,9 +69,9 @@ class HeroCombatEffects
      *
      * @return array{structural_integrity: int, shield: int, attack: int}
      */
-    public function unitStats(UnitObject $unit, PlayerService $player, int $ownerId, int|null $garrisonPlanetId): array
+    public function unitStats(UnitObject $unit, PlayerService $player, int $ownerId, bool $isGarrison): array
     {
-        $percents = $this->percents($ownerId, $garrisonPlanetId, $unit);
+        $percents = $this->percents($ownerId, $isGarrison, $unit);
         $stats = [];
         foreach (['structural_integrity', 'shield', 'attack'] as $property) {
             $details = $unit->properties->{$property}->calculate($player);

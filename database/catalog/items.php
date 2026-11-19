@@ -17,8 +17,10 @@
 | a few items per slot type, cautious values well under the axis caps.
 | Displayed names are provisional (resources/lang/{fr,en}/t_items.php).
 | troop_combat_bonus_percent (troops of the army) and
-| garrison_defense_bonus_percent (garrison of the governed city) apply in
-| battle army by army since lot 2 (OGame\Services\Hero\HeroCombatEffects).
+| garrison_defense_bonus_percent (garrison of any city of the kingdom when it
+| is attacked) apply in battle army by army since lot 2
+| (OGame\Services\Hero\HeroCombatEffects). Every effect is kingdom-wide
+| ("empire" scope): no governor per city since 2026-11-19.
 */
 return [
     'head_warden_helm' => [
@@ -30,14 +32,14 @@ return [
     'shoulders_warden_pauldrons' => [
         'kind' => 'equipment', 'slot_type' => 'shoulders', 'equip_class' => 'heavy', 'rarity' => 1, 'required_level' => 1,
         'effects' => [
-            ['type' => 'garrison_defense_bonus_percent', 'scope' => 'city', 'target' => '*', 'value' => 2.0],
+            ['type' => 'garrison_defense_bonus_percent', 'scope' => 'empire', 'target' => '*', 'value' => 2.0],
         ],
     ],
     'chest_warden_hauberk' => [
         'kind' => 'equipment', 'slot_type' => 'chest', 'equip_class' => 'heavy', 'rarity' => 2, 'required_level' => 3,
         'effects' => [
             ['type' => 'troop_combat_bonus_percent', 'scope' => 'empire', 'target' => '*', 'value' => 1.5],
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => 'metal', 'value' => 1.0],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'metal', 'value' => 1.0],
         ],
     ],
     'wrists_warden_bracers' => [
@@ -55,13 +57,13 @@ return [
     'belt_warden_girdle' => [
         'kind' => 'equipment', 'slot_type' => 'belt', 'equip_class' => 'heavy', 'rarity' => 1, 'required_level' => 1,
         'effects' => [
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => 'crystal', 'value' => 1.5],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'crystal', 'value' => 1.5],
         ],
     ],
     'legs_warden_greaves' => [
         'kind' => 'equipment', 'slot_type' => 'legs', 'equip_class' => 'heavy', 'rarity' => 2, 'required_level' => 3,
         'effects' => [
-            ['type' => 'garrison_defense_bonus_percent', 'scope' => 'city', 'target' => '*', 'value' => 2.0],
+            ['type' => 'garrison_defense_bonus_percent', 'scope' => 'empire', 'target' => '*', 'value' => 2.0],
             ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'metal', 'value' => 0.5],
         ],
     ],
@@ -80,14 +82,14 @@ return [
     'shoulders_adept_mantle' => [
         'kind' => 'equipment', 'slot_type' => 'shoulders', 'equip_class' => 'arcane', 'rarity' => 1, 'required_level' => 1,
         'effects' => [
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => 'deuterium', 'value' => 1.5],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'deuterium', 'value' => 1.5],
         ],
     ],
     'chest_adept_robe' => [
         'kind' => 'equipment', 'slot_type' => 'chest', 'equip_class' => 'arcane', 'rarity' => 2, 'required_level' => 3,
         'effects' => [
             ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'deuterium', 'value' => 1.0],
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => '*', 'value' => 0.5],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => '*', 'value' => 0.5],
         ],
     ],
     'wrists_adept_cuffs' => [
@@ -105,7 +107,7 @@ return [
     'belt_adept_sash' => [
         'kind' => 'equipment', 'slot_type' => 'belt', 'equip_class' => 'arcane', 'rarity' => 1, 'required_level' => 1,
         'effects' => [
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => 'deuterium', 'value' => 1.0],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'deuterium', 'value' => 1.0],
         ],
     ],
     'legs_adept_leggings' => [
@@ -117,7 +119,7 @@ return [
     'boots_adept_slippers' => [
         'kind' => 'equipment', 'slot_type' => 'boots', 'equip_class' => 'arcane', 'rarity' => 1, 'required_level' => 1,
         'effects' => [
-            ['type' => 'production_bonus_percent', 'scope' => 'city', 'target' => 'metal', 'value' => 1.5],
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'metal', 'value' => 1.5],
         ],
     ],
     'neck_traveler_amulet' => [

@@ -4,7 +4,6 @@ namespace Tests\Feature\Items;
 
 use OGame\Enums\HeroArchetype;
 use OGame\Enums\TalentEffectScope;
-use OGame\Exceptions\HeroRuleException;
 use OGame\Factories\PlanetServiceFactory;
 use OGame\Models\Hero;
 use OGame\Models\HeroTalent;
@@ -144,27 +143,16 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
         $this->assertSame($before, $this->stored(1));
     }
 
-    public function testCityTalentOnlyRaisesTheGovernedCity(): void
+    public function testLegacyCityTalentRaisesEveryCityOfTheKingdom(): void
     {
-        HeroTalent::create(['hero_id' => $this->hero->id, 'talent_node_id' => $this->talent('production_bonus_percent', 5, TalentEffectScope::CITY)->id, 'rank' => 1]);
+        // No governor per city since 2026-11-19: a "city" talent is kingdom-wide.
         $before1 = $this->stored(1);
         $before2 = $this->stored(2);
 
-        resolve(HeroRosterService::class)->appointGovernor($this->hero, $this->planet(1)->getPlanetId());
+        resolve(HeroTalentService::class)->allocate($this->hero, $this->talent('production_bonus_percent', 5, TalentEffectScope::CITY));
 
         $this->assertSame($before1['metal'] + $this->expectedBonus(1, 'metal_mine', 'metal', 5), $this->stored(1)['metal']);
-        $this->assertSame($before2, $this->stored(2));
-    }
-
-    public function testRemovingTheGovernorRemovesTheCityBonus(): void
-    {
-        HeroTalent::create(['hero_id' => $this->hero->id, 'talent_node_id' => $this->talent('production_bonus_percent', 5, TalentEffectScope::CITY)->id, 'rank' => 1]);
-        $before = $this->stored(1);
-        resolve(HeroRosterService::class)->appointGovernor($this->hero, $this->planet(1)->getPlanetId());
-
-        resolve(HeroRosterService::class)->appointGovernor($this->hero, null);
-
-        $this->assertSame($before, $this->stored(1));
+        $this->assertSame($before2['metal'] + $this->expectedBonus(2, 'metal_mine', 'metal', 5), $this->stored(2)['metal']);
     }
 
     public function testEmpireItemTargetedAtWoodOnlyRaisesWood(): void
@@ -178,16 +166,20 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
         $this->assertSame($before['deuterium'], $this->stored(2)['deuterium']);
     }
 
-    public function testCityItemOnlyCountsInTheCityTheHeroGoverns(): void
+    public function testAnAdvisorItemRaisesEveryCityOfTheKingdom(): void
     {
+        // Each individual (main hero or advisor) gives its bonus to the whole kingdom.
+        $advisor = resolve(HeroRosterService::class)->recruitAdvisor(User::findOrFail($this->currentUserId), HeroArchetype::WARRIOR, 'Squire');
         $before1 = $this->stored(1);
-        $this->wearProduction(2, 'city', 'crystal');
-        $this->assertSame($before1, $this->stored(1));
+        $before2 = $this->stored(2);
+        $definition = $this->definition('test_prod_advisor_crystal', 'belt', 'any', [
+            ['type' => 'production_bonus_percent', 'scope' => 'empire', 'target' => 'crystal', 'value' => 2],
+        ]);
 
-        resolve(HeroRosterService::class)->appointGovernor($this->hero, $this->planet(1)->getPlanetId());
+        resolve(HeroEquipmentService::class)->equip($advisor, $this->give($this->currentUserId, $definition));
 
         $this->assertSame($before1['crystal'] + $this->expectedBonus(1, 'crystal_mine', 'crystal', 2), $this->stored(1)['crystal']);
-        $this->assertSame(0, $this->heroComponent(2, 'crystal_mine', 'crystal'));
+        $this->assertSame($before2['crystal'] + $this->expectedBonus(2, 'crystal_mine', 'crystal', 2), $this->stored(2)['crystal']);
     }
 
     public function testUnequipRemovesTheItemBonus(): void
@@ -204,11 +196,9 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
     public function testTheCapAppliesToTheFinalTotalOfTalentsAndItems(): void
     {
         HeroTalent::create(['hero_id' => $this->hero->id, 'talent_node_id' => $this->talent('production_bonus_percent', 8, TalentEffectScope::CITY)->id, 'rank' => 1]);
-        $this->hero->planet_id = $this->planet(1)->getPlanetId();
-        $this->hero->save();
         $before = $this->stored(1);
 
-        // 8 (city talent) + 5 (empire item) = 13, capped at 10 on the total.
+        // 8 (legacy city talent) + 5 (item) = 13, capped at 10 on the total.
         resolve(HeroEffectsChanged::class)->apply($this->currentUserId, fn () => null);
         $this->wearProduction(5, 'empire', 'metal');
 
@@ -271,31 +261,54 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
         $this->assertSame(0, (int) $this->planet(1)->getObjectProductionIndex(ObjectService::getGameObjectsWithProductionByMachineName('solar_plant'))->hero->energy->get());
     }
 
-    public function testAHeroOnlyGovernsACityOfItsKingdomAndOneHeroPerCity(): void
+    public function testDeletingACityNeverBlocksOnALegacyPlanetIdOfAHero(): void
     {
-        $roster = resolve(HeroRosterService::class);
-        $advisor = $roster->recruitAdvisor(User::findOrFail($this->currentUserId), HeroArchetype::STEWARD, 'Steward');
-        $roster->appointGovernor($this->hero, $this->planet(1)->getPlanetId());
-
-        try {
-            $roster->appointGovernor($advisor, $this->planet(1)->getPlanetId());
-            $this->fail('Two governors in one city.');
-        } catch (HeroRuleException) {
-            $this->addToAssertionCount(1);
-        }
-
-        $foreign = Planet::where('user_id', '!=', $this->currentUserId)->whereNotNull('user_id')->firstOrFail();
-        $this->expectException(HeroRuleException::class);
-        $roster->appointGovernor($advisor, $foreign->id);
-    }
-
-    public function testAGovernorLosesADeletedCity(): void
-    {
+        // heroes.planet_id is unused since 2026-11-19 but kept, nullable, nullOnDelete.
         $planetId = $this->planet(2)->getPlanetId();
-        resolve(HeroRosterService::class)->appointGovernor($this->hero, $planetId);
+        $this->hero->planet_id = $planetId;
+        $this->hero->save();
 
         Planet::whereKey($planetId)->delete();
 
         $this->assertNull($this->hero->refresh()->planet_id);
+    }
+
+    public function testSmallBonusesAreFlooredPerBuildingCeiledOnTheTotalAndSurviveAReload(): void
+    {
+        // Small bonus, full energy: bonus = floor((mine + slot) x 0.5 / 100) per
+        // building, the stored rate is the ceiled total (upstream rounding).
+        $before = $this->stored(1);
+        $this->wearProduction(0.5, 'empire', '*');
+
+        foreach (['metal' => 'metal_mine', 'crystal' => 'crystal_mine', 'deuterium' => 'deuterium_synthesizer'] as $resource => $building) {
+            $bonus = $this->expectedBonus(1, $building, $resource, 0.5);
+            $this->assertSame($bonus, $this->heroComponent(1, $building, $resource), $resource);
+            $this->assertSame($before[$resource] + $bonus, $this->stored(1)[$resource], $resource);
+        }
+
+        // A fresh service loaded from the database recalculates exactly the stored rate.
+        $stored = $this->stored(1);
+        $reloaded = $this->planet(1);
+        $reloaded->updateResourceProductionStats(false);
+        $this->assertSame($stored['metal'], (int) $reloaded->getMetalProductionPerHour());
+    }
+
+    public function testReducedProductionFactorKeepsStoredAndRecalculatedRatesEqual(): void
+    {
+        // Not enough Food (energy): production factor under 100 %.
+        $planet = $this->planet(1);
+        $planet->setObjectLevel(ObjectService::getObjectByMachineName('solar_plant')->id, 12, true);
+        $planet->updateResourceProductionStats();
+        $this->assertLessThan(100, $this->planet(1)->getResourceProductionFactor());
+        $before = $this->stored(1);
+
+        $this->wearProduction(3, 'empire', 'metal');
+
+        $stored = $this->stored(1);
+        $this->assertGreaterThan($before['metal'], $stored['metal']);
+        $this->assertSame($before['crystal'], $stored['crystal']);
+        $reloaded = $this->planet(1);
+        $reloaded->updateResourceProductionStats(false);
+        $this->assertSame($stored['metal'], (int) $reloaded->getMetalProductionPerHour());
     }
 }

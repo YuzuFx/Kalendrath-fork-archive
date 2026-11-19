@@ -97,21 +97,19 @@ abstract class BattleEngine
      */
     protected function attackerUnitStats(AttackerFleet $fleet, UnitObject $unit): array
     {
-        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, null);
+        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, false);
     }
 
     /**
      * Battle values of one unit type of one defending army: the planet
-     * owner's stationary garrison (with the governor's city effects) or an
+     * owner's stationary garrison (with the kingdom's garrison effects) or an
      * allied defending army (its own owner's research and heroes only).
      *
      * @return array{structural_integrity: int, shield: int, attack: int}
      */
     protected function defenderUnitStats(DefenderFleet $fleet, UnitObject $unit): array
     {
-        $garrisonPlanetId = $fleet->fleetMissionId === 0 ? $this->defenderPlanet->getPlanetId() : null;
-
-        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, $garrisonPlanetId);
+        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, $fleet->fleetMissionId === 0);
     }
 
     /**

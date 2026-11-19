@@ -7,7 +7,6 @@ use OGame\Enums\HeroArchetype;
 use OGame\Enums\HeroRole;
 use OGame\Exceptions\HeroRuleException;
 use OGame\Models\Hero;
-use OGame\Models\Planet;
 use OGame\Models\User;
 
 /**
@@ -16,41 +15,6 @@ use OGame\Models\User;
  */
 class HeroRosterService
 {
-    public function __construct(private readonly HeroEffectsChanged $effectsChanged)
-    {
-    }
-
-    /**
-     * Appoints a hero as governor of one of its kingdom's cities, or removes
-     * it from its city ($planetId = null). One governor per city. The city
-     * effects of the hero's talents and equipment move with it, so the
-     * production is settled at the old rate, then recalculated.
-     *
-     * @param Hero $hero
-     * @param int|null $planetId
-     * @return Hero
-     */
-    public function appointGovernor(Hero $hero, int|null $planetId): Hero
-    {
-        if ($planetId !== null) {
-            $planet = Planet::whereKey($planetId)->first();
-            if ($planet === null || $planet->user_id !== $hero->user_id || (bool) $planet->destroyed) {
-                throw HeroRuleException::because('planet_not_owned');
-            }
-            if (Hero::where('planet_id', $planetId)->whereKeyNot($hero->id)->exists()) {
-                throw HeroRuleException::because('planet_already_governed');
-            }
-        }
-
-        $this->effectsChanged->apply($hero->user_id, function () use ($hero, $planetId): void {
-            Hero::whereKey($hero->id)->lockForUpdate()->firstOrFail();
-            $hero->planet_id = $planetId;
-            $hero->save();
-        });
-
-        return $hero;
-    }
-
     /**
      * Number of Council seats open to the player.
      *

@@ -75,8 +75,11 @@ class Hero extends Model
     }
 
     /**
-     * The planet this hero governs, if assigned.
+     * Legacy governed planet. No governor per city since 2026-11-19: the
+     * column heroes.planet_id stays (nullable, nullOnDelete) but nothing reads
+     * or writes it; every hero effect is kingdom-wide.
      *
+     * @deprecated unused since 2026-11-19
      * @return BelongsTo<Planet, $this>
      */
     public function planet(): BelongsTo

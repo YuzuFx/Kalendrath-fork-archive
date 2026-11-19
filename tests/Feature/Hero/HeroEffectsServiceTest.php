@@ -109,9 +109,18 @@ class HeroEffectsServiceTest extends HeroTestCase
         $this->assertEqualsWithDelta(4.0, resolve(HeroEffectsService::class)->forEmpire($this->user)['production_bonus_percent'], 0.001);
     }
 
-    public function testEmpireIgnoresNonEmpireScopes(): void
+    public function testLegacyCityScopeCountsKingdomWide(): void
     {
+        // No governor per city since 2026-11-19: a "city" effect reaches the whole kingdom.
         $this->invest($this->hero, 'production_bonus_percent', 4, TalentEffectScope::CITY);
+
+        $this->assertEqualsWithDelta(4.0, resolve(HeroEffectsService::class)->forEmpire($this->user)['production_bonus_percent'], 0.001);
+        $this->assertEqualsWithDelta(4.0, resolve(HeroEffectsService::class)->forKingdom($this->user->id, 'production_bonus_percent', 'metal'), 0.001);
+    }
+
+    public function testGroupScopeNeverReachesTheKingdom(): void
+    {
+        $this->invest($this->hero, 'troop_combat_bonus_percent', 4, TalentEffectScope::GROUP);
 
         $this->assertSame([], resolve(HeroEffectsService::class)->forEmpire($this->user));
     }
@@ -149,16 +158,16 @@ class HeroEffectsServiceTest extends HeroTestCase
         $this->assertSame([], resolve(HeroEffectsService::class)->forEmpire($this->user));
     }
 
-    public function testCityCapAppliesOnceOnTheFinalTotalAcrossScopes(): void
+    public function testTheCapAppliesOnceOnTheFinalTotalAcrossScopes(): void
     {
         // 8 city + 8 empire would be 16 if each scope were capped separately.
         $this->invest($this->hero, 'production_bonus_percent', 8, TalentEffectScope::EMPIRE);
         $this->wear($this->hero, 'head', 'production_bonus_percent', 8, TalentEffectScope::CITY);
         $service = resolve(HeroEffectsService::class);
-        $components = $service->cityComponents([[
-            'role' => HeroRole::MAIN, 'planet_id' => 42,
+        $components = $service->kingdomComponents([[
+            'role' => HeroRole::MAIN,
             'effects' => $service->rawForHero($this->hero),
-        ]], 42);
+        ]]);
 
         $this->assertEqualsWithDelta(10.0, $service->finalValue($components, 'production_bonus_percent', 'metal'), 0.001);
     }
@@ -168,7 +177,7 @@ class HeroEffectsServiceTest extends HeroTestCase
         $this->invest($this->hero, 'production_bonus_percent', 2, TalentEffectScope::EMPIRE);
         $this->wear($this->hero, 'head', 'production_bonus_percent', 3, TalentEffectScope::EMPIRE, 'metal');
         $service = resolve(HeroEffectsService::class);
-        $components = $service->cityComponents($service->kingdom($this->user->id), 0);
+        $components = $service->kingdomComponents($service->kingdom($this->user->id));
 
         $this->assertEqualsWithDelta(5.0, $service->finalValue($components, 'production_bonus_percent', 'metal'), 0.001);
         $this->assertEqualsWithDelta(2.0, $service->finalValue($components, 'production_bonus_percent', 'crystal'), 0.001);

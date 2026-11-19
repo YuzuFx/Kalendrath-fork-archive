@@ -10,7 +10,7 @@ use OGame\Services\PlanetService;
 
 /**
  * The single entry point for anything that changes a hero effect on the
- * production (equip, unequip, talents, governor, rebalance of an item).
+ * production (equip, unequip, talents, rebalance of an item).
  * Production rates are stored on each planet and resources accrue at the
  * stored rate, so the order is strict, in one transaction:
  *
