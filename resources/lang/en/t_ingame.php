@@ -1636,6 +1636,7 @@ return [
         'weight_delay'                 => 'Delay weight:',
         'weight_dm'                    => 'Dark Matter weight:',
         'weight_items'                 => 'Items weight:',
+        'loot_item_rate_multiplier'    => 'Item loot rate multiplier (Kalendrath):',
         'weight_merchant'              => 'Merchant weight:',
         'weight_nothing'               => 'Nothing/Failed weight:',
         'weight_pirates'               => 'Pirates weight:',

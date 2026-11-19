@@ -71,6 +71,7 @@ class ServerSettingsController extends OGameController
             'expedition_weight_dark_matter' => $settingsService->expeditionWeightDarkMatter(),
             'expedition_weight_merchant' => $settingsService->expeditionWeightMerchant(),
             'expedition_weight_items' => $settingsService->expeditionWeightItems(),
+            'loot_item_rate_multiplier' => $settingsService->lootItemRateMultiplier(),
             'hamill_probability' => $settingsService->hamillManoeuvreChance(),
             'highscore_admin_visible' => $settingsService->highscoreAdminVisible(),
         ]);
@@ -139,6 +140,8 @@ class ServerSettingsController extends OGameController
         $settingsService->set('expedition_weight_dark_matter', request('expedition_weight_dark_matter', 7.5));
         $settingsService->set('expedition_weight_merchant', request('expedition_weight_merchant', 0.4));
         $settingsService->set('expedition_weight_items', request('expedition_weight_items', 0));
+        // Kalendrath: multiplier of every item loot table's drop chance (config/loot.php).
+        $settingsService->set('loot_item_rate_multiplier', (string) max(0, (float)request('loot_item_rate_multiplier', 1.0)));
 
         $settingsService->set('hamill_manoeuvre_chance', max(1, (int)request('hamill_probability', 1000)));
 

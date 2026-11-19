@@ -704,6 +704,18 @@ class SettingsService
     }
 
     /**
+     * Kalendrath: multiplier applied to the drop chance of every item loot
+     * table (config/loot.php), default 1.0. The lever to lower item loot
+     * without a migration (e.g. when crafting arrives).
+     *
+     * @return float
+     */
+    public function lootItemRateMultiplier(): float
+    {
+        return max(0.0, (float)$this->get('loot_item_rate_multiplier', '1.0'));
+    }
+
+    /**
      * Get the Hamill Manoeuvre probability (Light Fighter destroying Deathstar).
      * This is the probability denominator (1 in X chance).
      * Default is 1000 (0.1% chance = 1 in 1000).

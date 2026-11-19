@@ -430,6 +430,12 @@
                                     <input type="text" pattern="[0-9]*\.?[0-9]*" class="textInput w50 textCenter textBeefy" value="{{ $expedition_weight_items }}" size="6" name="expedition_weight_items">
                                 </div>
                             </div>
+                            <div class="fieldwrapper">
+                                <label class="styled textBeefy">{{ __('t_ingame.admin.loot_item_rate_multiplier') }}</label>
+                                <div class="thefield">
+                                    <input type="text" pattern="[0-9]*\.?[0-9]*" class="textInput w50 textCenter textBeefy" value="{{ $loot_item_rate_multiplier }}" size="6" name="loot_item_rate_multiplier">
+                                </div>
+                            </div>
                         </div>
 
                         <p class="box_highlight textCenter no_buddies">{{ __('t_ingame.admin.section_highscore') }}</p>

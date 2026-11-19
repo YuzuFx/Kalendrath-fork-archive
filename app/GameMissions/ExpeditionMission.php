@@ -39,6 +39,8 @@ use OGame\Models\User;
 use OGame\Services\CharacterClassService;
 use OGame\Services\DarkMatterService;
 use OGame\Services\DebrisFieldService;
+use OGame\Services\Items\ExpeditionLootService;
+use OGame\Services\Items\KingdomItemService;
 use OGame\Services\MerchantService;
 use OGame\Services\NPCFleetGeneratorService;
 use OGame\Services\NPCPlanetService;
@@ -79,6 +81,8 @@ class ExpeditionMission extends GameMission
             'pirates' => $settingsService->expeditionWeightPirates(),
             'aliens' => $settingsService->expeditionWeightAliens(),
             'merchant' => $settingsService->expeditionWeightMerchant(),
+            // Kalendrath: item loot (setting existed upstream, outcome was unreachable).
+            'items' => $settingsService->expeditionWeightItems(),
         ];
 
         // Apply Discoverer class bonus: 50% reduced chance of combat encounters
@@ -107,6 +111,11 @@ class ExpeditionMission extends GameMission
         }
         if ($player->getExpeditionSlotsInUse() >= $player->getExpeditionSlotsMax()) {
             throw new Exception('You are conducting too many expeditions at the same time.');
+        }
+
+        // Kalendrath: no new expedition while the item bag is full (loot may overflow it).
+        if (app(KingdomItemService::class)->isBagFull($player->getId())) {
+            throw new Exception(__('t_items.error.inventory_full_expedition'));
         }
 
         // Check if there is at least one non-espionage unit in the fleet.
@@ -662,7 +671,13 @@ class ExpeditionMission extends GameMission
         // Load the mission owner user
         $player = $this->playerServiceFactory->make($mission->user_id, true);
 
-        // TODO: Implement actual item giving logic when items themselves are implemented.
+        // Kalendrath: one item for the kingdom, in this transaction, idempotent per mission.
+        if (app(ExpeditionLootService::class)->grant($mission) === null) {
+            // Nothing could be granted (no drop, empty catalog) -> treat as Failed.
+            $this->processExpeditionFailedOutcome($mission);
+
+            return;
+        }
 
         // Send a message to the player with the item found outcome.
         $message_variation_id = ExpeditionGainItem::getRandomMessageVariationId();
@@ -961,6 +976,7 @@ class ExpeditionMission extends GameMission
             'pirates' => ExpeditionOutcomeType::BattlePirates,
             'aliens' => ExpeditionOutcomeType::BattleAliens,
             'merchant' => ExpeditionOutcomeType::GainMerchantTrade,
+            'items' => ExpeditionOutcomeType::GainItems,
         ];
 
         // Build weighted array of enabled outcomes
