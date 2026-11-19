@@ -19,6 +19,9 @@ final readonly class LootContext
         public string $idempotencyKey,
         // Fixed seed for tests; NULL = random (the seed is journaled anyway).
         public int|null $seed = null,
+        // Extra audit data journaled with the roll (e.g. the battle report id).
+        /** @var array<string, int|string|null> */
+        public array $meta = [],
     ) {
     }
 }

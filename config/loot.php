@@ -33,7 +33,8 @@ return [
             'slot_types' => null,
         ],
 
-        // PvE bot camps (lot 2, not wired yet): one roll per attacking army.
+        // PvE bot camps (config/pve.php): one roll per surviving attacking
+        // army of a victorious raid (PveRaidLootService).
         'pve_camp.t1' => [
             'drop_chance' => 0.25,
             'rarity_weights' => [1 => 75, 2 => 22, 3 => 3],

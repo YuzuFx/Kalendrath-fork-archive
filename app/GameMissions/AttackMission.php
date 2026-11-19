@@ -23,6 +23,7 @@ use OGame\Services\DebrisFieldService;
 use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
 use OGame\Services\PlayerService;
+use OGame\Services\Pve\PveRaidLootService;
 use OGame\Services\WreckFieldService;
 use RuntimeException;
 use Throwable;
@@ -79,6 +80,17 @@ class AttackMission extends GameMission
 
         // If all checks pass, the mission is possible.
         return new MissionPossibleStatus(true);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function startMissionSanityChecks(PlanetService $planet, Coordinate $targetCoordinate, PlanetType $targetType, UnitCollection $units, Resources $resources): void
+    {
+        parent::startMissionSanityChecks($planet, $targetCoordinate, $targetType, $units, $resources);
+
+        // Kalendrath: no raid on a PvE camp while the item bag is full (loot may overflow it).
+        app(PveRaidLootService::class)->assertCanRaid($planet->getPlayer()?->getId() ?? 0, $targetCoordinate, $targetType);
     }
 
     /**
@@ -464,6 +476,9 @@ class AttackMission extends GameMission
             // Send to defender.
             $this->messageService->sendBattleReportMessageToPlayer($defenderPlayer, $reportId);
         }
+
+        // Kalendrath: item loot of a victorious raid on a PvE camp, one roll per attacking army.
+        app(PveRaidLootService::class)->afterBattle($defenderPlanet->getPlanetId(), $battleResult, $reportId);
 
         // Send Reaper auto-collection message to attacker if debris was collected
         if ($attackerCollectedDebris->sum() > 0) {

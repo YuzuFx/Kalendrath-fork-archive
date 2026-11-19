@@ -55,7 +55,7 @@ class LootService
             'loot_version' => (int) config('loot.version'),
             'multiplier' => $multiplier,
             'seed' => $seed,
-        ];
+        ] + $context->meta;
 
         [$operation] = $this->ledger->run(
             $context->idempotencyKey,

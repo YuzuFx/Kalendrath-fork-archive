@@ -67,6 +67,7 @@ return [
         'item_not_owned' => 'Cet objet n\'appartient pas à votre royaume.',
         'item_not_available' => 'Cet objet n\'est pas disponible (porté, réservé ou détruit).',
         'inventory_full_expedition' => 'L\'inventaire de votre royaume est plein : libérez des places avant d\'envoyer une nouvelle expédition.',
+        'inventory_full_raid' => 'L\'inventaire de votre royaume est plein : libérez des places avant d\'attaquer un camp.',
     ],
 
     'item' => [

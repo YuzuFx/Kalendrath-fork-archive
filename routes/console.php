@@ -1,5 +1,6 @@
 <?php
 
+use OGame\Console\Commands\Pve\RespawnPveCamps;
 use OGame\Console\Commands\Scheduler\CleanupDestroyedPlanets;
 use OGame\Console\Commands\Scheduler\CleanupWreckFields;
 use OGame\Console\Commands\Scheduler\DarkMatterRegenerateCommand;
@@ -40,3 +41,6 @@ Schedule::command(CleanupDestroyedPlanets::class)->dailyAt('03:00')->withoutOver
 
 // Process Dark Matter regeneration every 5 minutes
 Schedule::command(DarkMatterRegenerateCommand::class)->everyFiveMinutes()->withoutOverlapping();
+
+// Kalendrath: PvE camps get their garrison back once their respawn time has come
+Schedule::command(RespawnPveCamps::class)->everyMinute()->withoutOverlapping();
