@@ -21,6 +21,7 @@ use OGame\Models\PveCamp;
 use OGame\Models\Resources;
 use OGame\Models\User;
 use OGame\Services\Items\ItemCatalogService;
+use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
 use OGame\Services\Pve\PveCampService;
 use OGame\Services\Pve\PveRaidLootService;
@@ -242,6 +243,28 @@ class PveRaidLootTest extends FleetDispatchTestCase
 
         $this->campCoordinate = $this->createForeignPlanet()->getPlanetCoordinates();
         $this->assertNotNull($this->raid(['cruiser' => 10]));
+    }
+
+    public function testARaidInFlightReservesAPlaceAtLaunch(): void
+    {
+        $this->basicSetup();
+        config(['items.inventory.capacity' => 1]);
+        $this->spawnCamp();
+
+        $attacks = fn (): int => FleetMission::where('user_id', $this->currentUserId)->where('mission_type', 1)->whereNull('parent_id')->count();
+
+        // Empty bag, nothing in flight: allowed; then the raid holds the only place.
+        $this->raid(['cruiser' => 10]);
+        $this->assertSame(1, $attacks());
+        $this->assertSame(1, resolve(PveLaunchGuard::class)->inFlight($this->currentUserId));
+        $this->raid(['cruiser' => 10], false);
+        $this->assertSame(1, $attacks());
+
+        // An attack on a player is not PvE content: not counted, not refused.
+        $this->campCoordinate = $this->createForeignPlanet()->getPlanetCoordinates();
+        $this->raid(['cruiser' => 10]);
+        $this->assertSame(2, $attacks());
+        $this->assertSame(1, resolve(PveLaunchGuard::class)->inFlight($this->currentUserId));
     }
 
     /**

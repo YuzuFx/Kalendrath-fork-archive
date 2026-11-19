@@ -19,6 +19,10 @@ use OGame\Models\KingdomItem;
  */
 class ItemLedger
 {
+    public function __construct(private readonly KingdomLock $lock)
+    {
+    }
+
     /**
      * Runs $body once per idempotency key, inside a transaction.
      *
@@ -62,14 +66,24 @@ class ItemLedger
                     'meta' => $meta === [] ? null : $meta,
                 ]);
             } catch (UniqueConstraintViolationException) {
-                // A concurrent request inserted the same key first.
-                $existing = $this->existing($idempotencyKey, $hash);
+                // A concurrent transaction committed the same key first. Read
+                // the winner with a CURRENT read: the plain read above uses the
+                // transaction's snapshot (REPEATABLE READ), taken before that
+                // commit, and would not see it.
+                $existing = $this->existing($idempotencyKey, $hash, true);
                 if ($existing === null) {
                     throw ItemIdempotencyConflictException::forKey($idempotencyKey);
                 }
 
                 return [$existing, true];
             }
+
+            // The key is reserved (row inserted) BEFORE any roll or mutation:
+            // a replay finds this operation and its recorded result, "no
+            // loot" included. Then the kingdom lock (KingdomLock, lock order
+            // documented there) serialises this change with the kingdom's
+            // other inventory paths.
+            $this->lock->acquire($subjectUserId);
 
             $body($operation);
 
@@ -118,9 +132,10 @@ class ItemLedger
         ];
     }
 
-    private function existing(string $idempotencyKey, string $hash): ItemOperation|null
+    private function existing(string $idempotencyKey, string $hash, bool $currentRead = false): ItemOperation|null
     {
-        $existing = ItemOperation::where('idempotency_key', $idempotencyKey)->first();
+        $query = ItemOperation::where('idempotency_key', $idempotencyKey);
+        $existing = $currentRead ? $query->lockForUpdate()->first() : $query->first();
         if ($existing !== null && $existing->payload_hash !== $hash) {
             throw ItemIdempotencyConflictException::forKey($idempotencyKey);
         }

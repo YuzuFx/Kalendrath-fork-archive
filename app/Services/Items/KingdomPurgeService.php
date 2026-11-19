@@ -21,6 +21,8 @@ class KingdomPurgeService
         }
 
         DB::transaction(function () use ($userId): void {
+            // Serialised with loot, launches, equip and discard of this kingdom.
+            app(KingdomLock::class)->acquire($userId);
             // Worn items reference their hero (composite key): delete items first.
             KingdomItem::where('owner_user_id', $userId)->delete();
             // Talents and the legacy hero_equipment rows cascade with the hero.

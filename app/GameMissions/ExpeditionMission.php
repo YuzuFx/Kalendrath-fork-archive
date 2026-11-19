@@ -40,7 +40,7 @@ use OGame\Services\CharacterClassService;
 use OGame\Services\DarkMatterService;
 use OGame\Services\DebrisFieldService;
 use OGame\Services\Items\ExpeditionLootService;
-use OGame\Services\Items\KingdomItemService;
+use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\MerchantService;
 use OGame\Services\NPCFleetGeneratorService;
 use OGame\Services\NPCPlanetService;
@@ -99,6 +99,20 @@ class ExpeditionMission extends GameMission
     }
 
     /**
+     * Kalendrath: an expedition may bring an item back, so its launch is
+     * serialised per kingdom with the inventory (PveLaunchGuard).
+     *
+     * @inheritdoc
+     */
+    public function start(PlanetService $planet, Coordinate $targetCoordinate, PlanetType $targetType, UnitCollection $units, Resources $resources, float $speedPercent, int $holdingHours = 0, int $parentId = 0, bool $retreatAfterDefenderRetreat = false): FleetMission
+    {
+        return app(PveLaunchGuard::class)->launch(
+            $planet->getPlayer()?->getId() ?? 0,
+            fn (): FleetMission => parent::start($planet, $targetCoordinate, $targetType, $units, $resources, $speedPercent, $holdingHours, $parentId, $retreatAfterDefenderRetreat),
+        );
+    }
+
+    /**
      * @inheritdoc
      */
     public function startMissionSanityChecks(PlanetService $planet, Coordinate $targetCoordinate, PlanetType $targetType, UnitCollection $units, Resources $resources): void
@@ -113,10 +127,8 @@ class ExpeditionMission extends GameMission
             throw new Exception('You are conducting too many expeditions at the same time.');
         }
 
-        // Kalendrath: no new expedition while the item bag is full (loot may overflow it).
-        if (app(KingdomItemService::class)->isBagFull($player->getId())) {
-            throw new Exception(__('t_items.error.inventory_full_expedition'));
-        }
+        // Kalendrath: no new expedition while bag items + PvE missions in flight reach 32.
+        app(PveLaunchGuard::class)->assertCanLaunch($player->getId(), 'expedition');
 
         // Check if there is at least one non-espionage unit in the fleet.
         if (!$units->hasNonEspionageUnit()) {

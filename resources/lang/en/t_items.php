@@ -66,8 +66,8 @@ return [
     'error' => [
         'item_not_owned' => 'This item does not belong to your kingdom.',
         'item_not_available' => 'This item is not available (worn, reserved or destroyed).',
-        'inventory_full_expedition' => 'Your kingdom\'s inventory is full: free some places before sending a new expedition.',
-        'inventory_full_raid' => 'Your kingdom\'s inventory is full: free some places before attacking a camp.',
+        'inventory_full_expedition' => 'Your kingdom\'s inventory is full (:used items in the bag and :reserved places held by your ongoing sorties, out of :capacity): discard items or wait for your sorties to end before sending a new expedition.',
+        'inventory_full_raid' => 'Your kingdom\'s inventory is full (:used items in the bag and :reserved places held by your ongoing sorties, out of :capacity): discard items or wait for your sorties to end before attacking a camp.',
     ],
 
     'item' => [

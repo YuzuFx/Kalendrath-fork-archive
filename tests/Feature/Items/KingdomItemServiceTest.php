@@ -6,6 +6,7 @@ use OGame\Enums\HeroArchetype;
 use OGame\Enums\ItemOperationType;
 use OGame\Enums\ItemSourceType;
 use OGame\Enums\KingdomItemState;
+use OGame\Exceptions\HeroRuleException;
 use OGame\Exceptions\ItemIdempotencyConflictException;
 use OGame\Exceptions\ItemRuleException;
 use OGame\Factories\PlayerServiceFactory;
@@ -90,6 +91,41 @@ class KingdomItemServiceTest extends HeroTestCase
 
         $this->assertSame(1, ItemOperation::where('idempotency_key', 'test:discard')->count());
         $this->assertSame(1, ItemMovement::where('kingdom_item_id', $item->id)->where('to_state', 'destroyed')->count());
+    }
+
+    public function testDestroyedIsTerminalAndTheRowIsKept(): void
+    {
+        $item = $this->give($this->user->id, $this->definition('test_helm'));
+        $this->service()->discard($this->user->id, $item, 'test:discard');
+
+        // A second discard with another key, or an equip, is refused: no way out of destroyed.
+        try {
+            $this->service()->discard($this->user->id, $item, 'test:discard:again');
+            $this->fail('A destroyed item was discarded again.');
+        } catch (ItemRuleException) {
+            $this->addToAssertionCount(1);
+        }
+        try {
+            resolve(HeroEquipmentService::class)->equip($this->hero, $item->refresh());
+            $this->fail('A destroyed item was equipped.');
+        } catch (HeroRuleException) {
+            $this->addToAssertionCount(1);
+        }
+
+        $this->assertSame(KingdomItemState::DESTROYED, $item->refresh()->state);
+        $this->assertSame(0, ItemOperation::where('idempotency_key', 'test:discard:again')->count());
+    }
+
+    public function testTheUlidLivesInUidAndTheKeyStaysAnAutoIncrementedId(): void
+    {
+        $item = $this->give($this->user->id, $this->definition('test_helm'));
+
+        $this->assertTrue($item->getIncrementing());
+        $this->assertSame('int', $item->getKeyType());
+        $this->assertMatchesRegularExpression('/^[0-9a-hjkmnp-tv-z]{26}$/', $item->uid);
+        $operation = ItemOperation::findOrFail($item->created_operation_id);
+        $this->assertTrue($operation->getIncrementing());
+        $this->assertSame(26, strlen($operation->uid));
     }
 
     public function testAWornItemCannotBeDiscarded(): void

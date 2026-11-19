@@ -59,10 +59,13 @@ return new class () extends Migration {
                 ->references(['id', 'user_id'])->on('heroes')->restrictOnDelete();
         });
 
+        // uid, state, owner_user_id, item_definition_id, created_operation_id
+        // are NOT NULL (Laravel default, checked by KingdomItemSchemaTest).
         $checks = [
             'chk_kingdom_items_state' => "state IN ('available','equipped','reserved','in_transit','consumed','destroyed')",
-            'chk_kingdom_items_equipped' => "(state = 'equipped') = (holder_hero_id IS NOT NULL AND equipped_slot IS NOT NULL)",
-            'chk_kingdom_items_holder_slot' => '(holder_hero_id IS NULL) = (equipped_slot IS NULL)',
+            // Worn => holder AND position; any other state => both SQL NULL
+            // (Codex review of 2026-11-19: no half-worn row, whatever the state).
+            'chk_kingdom_items_equipped' => "(state = 'equipped' AND holder_hero_id IS NOT NULL AND equipped_slot IS NOT NULL) OR (state <> 'equipped' AND holder_hero_id IS NULL AND equipped_slot IS NULL)",
             'chk_kingdom_items_reservation_pair' => '(reservation_type IS NULL) = (reservation_id IS NULL)',
             'chk_kingdom_items_reserved' => "(state = 'reserved') = (reservation_type IS NOT NULL)",
             'chk_kingdom_items_equipped_not_reserved' => "state <> 'equipped' OR reservation_type IS NULL",

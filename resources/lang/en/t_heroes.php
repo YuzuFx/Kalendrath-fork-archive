@@ -92,7 +92,6 @@ return [
         'item_not_available' => 'This item is not available (already worn, reserved or destroyed).',
         'item_not_equipped' => 'This hero does not wear this item.',
         'class_not_allowed' => 'This archetype cannot wear this kind of equipment.',
-        'inventory_full' => 'The kingdom\'s inventory is full: free a place before taking this item off.',
         'slot_not_allowed' => 'This slot is not available to this hero.',
         'level_too_low' => 'The hero\'s level is too low for this item.',
     ],

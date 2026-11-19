@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Items;
 
+use Exception;
 use Illuminate\Support\Facades\Date;
 use OGame\Enums\HeroArchetype;
 use OGame\Enums\ItemSourceType;
@@ -16,6 +17,8 @@ use OGame\Services\Hero\HeroEquipmentService;
 use OGame\Services\Hero\HeroRosterService;
 use OGame\Services\Items\ExpeditionLootService;
 use OGame\Services\Items\ItemCatalogService;
+use OGame\Services\Items\KingdomItemService;
+use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
 use OGame\Services\SettingsService;
 use Tests\FleetDispatchTestCase;
@@ -124,6 +127,44 @@ class ExpeditionItemLootTest extends FleetDispatchTestCase
         $this->sendExpedition(false);
 
         $this->assertSame($before, FleetMission::where('user_id', $this->currentUserId)->count());
+    }
+
+    public function testPveMissionsInFlightReservePlacesAtLaunch(): void
+    {
+        $this->basicSetup();
+        // Two expedition slots (astrophysics 4), a bag of 2 places with 1 item.
+        $this->playerSetResearchLevel('astrophysics', 4);
+        config(['items.inventory.capacity' => 2]);
+        $kept = $this->give($this->currentUserId, $this->definition('test_helm'));
+        $outbound = fn (): int => FleetMission::where('user_id', $this->currentUserId)->where('mission_type', 15)->whereNull('parent_id')->count();
+
+        // 1 item + 0 in flight < 2: allowed.
+        $this->sendExpedition();
+        $this->assertSame(1, $outbound());
+        $this->assertSame(1, resolve(PveLaunchGuard::class)->inFlight($this->currentUserId));
+
+        // 1 item + 1 in flight >= 2: refused, with an explicit message.
+        try {
+            resolve(PveLaunchGuard::class)->assertCanLaunch($this->currentUserId, 'expedition');
+            $this->fail('The launch should be refused.');
+        } catch (Exception $e) {
+            $this->assertSame(__('t_items.error.inventory_full_expedition', ['used' => 1, 'reserved' => 1, 'capacity' => 2]), $e->getMessage());
+        }
+        $this->sendExpedition(false);
+        $this->assertSame(1, $outbound());
+
+        // The reserved place becomes the item: still full (2 items, 0 in flight).
+        $this->travel(10)->hours();
+        $this->get('/overview')->assertStatus(200);
+        $this->assertSame(2, resolve(KingdomItemService::class)->bagCount($this->currentUserId));
+        $this->assertSame(0, resolve(PveLaunchGuard::class)->inFlight($this->currentUserId));
+        $this->sendExpedition(false);
+        $this->assertSame(1, $outbound());
+
+        // Discarding is always allowed and frees a place.
+        resolve(KingdomItemService::class)->discard($this->currentUserId, $kept, 'test:discard:' . $kept->id);
+        $this->sendExpedition();
+        $this->assertSame(2, $outbound());
     }
 
     public function testNoEligibleItemFallsBackToAFailedExpedition(): void

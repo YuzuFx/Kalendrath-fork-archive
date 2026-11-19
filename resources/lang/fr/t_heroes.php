@@ -92,7 +92,6 @@ return [
         'item_not_available' => 'Cet objet n\'est pas disponible (déjà porté, réservé ou détruit).',
         'item_not_equipped' => 'Ce héros ne porte pas cet objet.',
         'class_not_allowed' => 'Cet archétype ne peut pas porter ce type d\'équipement.',
-        'inventory_full' => 'L\'inventaire du royaume est plein : libérez une place avant de retirer cet objet.',
         'slot_not_allowed' => 'Cet emplacement n\'est pas disponible pour ce héros.',
         'level_too_low' => 'Le niveau du héros est trop bas pour cet objet.',
     ],

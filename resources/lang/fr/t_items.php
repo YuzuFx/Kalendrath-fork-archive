@@ -66,8 +66,8 @@ return [
     'error' => [
         'item_not_owned' => 'Cet objet n\'appartient pas à votre royaume.',
         'item_not_available' => 'Cet objet n\'est pas disponible (porté, réservé ou détruit).',
-        'inventory_full_expedition' => 'L\'inventaire de votre royaume est plein : libérez des places avant d\'envoyer une nouvelle expédition.',
-        'inventory_full_raid' => 'L\'inventaire de votre royaume est plein : libérez des places avant d\'attaquer un camp.',
+        'inventory_full_expedition' => 'L\'inventaire de votre royaume est plein (:used objets au sac et :reserved places réservées par vos sorties en cours, sur :capacity) : supprimez des objets ou attendez le retour de vos sorties avant d\'envoyer une nouvelle expédition.',
+        'inventory_full_raid' => 'L\'inventaire de votre royaume est plein (:used objets au sac et :reserved places réservées par vos sorties en cours, sur :capacity) : supprimez des objets ou attendez le retour de vos sorties avant d\'attaquer un camp.',
     ],
 
     'item' => [

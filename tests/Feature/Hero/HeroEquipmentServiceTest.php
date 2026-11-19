@@ -189,14 +189,18 @@ class HeroEquipmentServiceTest extends HeroTestCase
         $this->assertNull($helm->equipped_slot);
     }
 
-    public function testUnequipIsRefusedWhenTheBagIsFull(): void
+    public function testUnequipIsAllowedEvenWhenTheBagIsFull(): void
     {
+        // Decision of 2026-11-19: taking an item off is always allowed, the
+        // cap only blocks new PvE departures (the bag may then exceed it).
         config(['items.inventory.capacity' => 1]);
         $helm = $this->service()->equip($this->hero, $this->own('head'));
         $this->own('legs');
 
-        $this->expectException(HeroRuleException::class);
         $this->service()->unequip($this->hero, $helm);
+
+        $this->assertSame(KingdomItemState::AVAILABLE, $helm->refresh()->state);
+        $this->assertSame(2, resolve(KingdomItemService::class)->bagCount($this->user->id));
     }
 
     public function testUnequipOfAnItemNotWornIsRefused(): void

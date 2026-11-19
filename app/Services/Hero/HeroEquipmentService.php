@@ -14,7 +14,6 @@ use OGame\Models\Hero;
 use OGame\Models\ItemOperation;
 use OGame\Models\KingdomItem;
 use OGame\Services\Items\ItemLedger;
-use OGame\Services\Items\KingdomItemService;
 
 /**
  * Equips and unequips kingdom items on a hero's twelve positions (GDD 5.5,
@@ -24,7 +23,8 @@ use OGame\Services\Items\KingdomItemService;
  * a composite foreign key); only an AVAILABLE item can be equipped; one item
  * per position (unique index); equipping over an occupied position is one
  * "swap" operation with two movements, never equipped -> equipped directly.
- * Lock order: the kingdom's planets (HeroEffectsChanged) -> hero -> items.
+ * Lock order: the kingdom's planets (HeroEffectsChanged) -> kingdom lock
+ * (ItemLedger) -> hero -> items, see KingdomLock.
  * Every change settles the production at the old rate, then recalculates it.
  */
 class HeroEquipmentService
@@ -32,7 +32,6 @@ class HeroEquipmentService
     public function __construct(
         private readonly ItemLedger $ledger,
         private readonly HeroEffectsChanged $effectsChanged,
-        private readonly KingdomItemService $items,
     ) {
     }
 
@@ -94,8 +93,9 @@ class HeroEquipmentService
     }
 
     /**
-     * Sends a worn item back to the kingdom's bag. Refused when the bag is
-     * full (the player discards something first).
+     * Sends a worn item back to the kingdom's bag. Always allowed, even when
+     * the bag is full (decision of 2026-11-19: the cap only blocks new PvE
+     * departures, PveLaunchGuard).
      */
     public function unequip(Hero $hero, KingdomItem $item, string|null $idempotencyKey = null, int|null $actorUserId = null): KingdomItem
     {
@@ -113,9 +113,6 @@ class HeroEquipmentService
 
                     if (!$target instanceof KingdomItem || $target->holder_hero_id !== $lockedHero->id || $target->state !== KingdomItemState::EQUIPPED) {
                         throw HeroRuleException::because('item_not_equipped');
-                    }
-                    if ($this->items->isBagFull($lockedHero->user_id)) {
-                        throw HeroRuleException::because('inventory_full');
                     }
 
                     $this->takeOff($operation, $target);
@@ -146,6 +143,7 @@ class HeroEquipmentService
             $hero->user_id,
             ['hero' => $hero->id, 'items' => $worn],
             function (ItemOperation $operation) use ($hero): void {
+                Hero::whereKey($hero->id)->lockForUpdate()->first();
                 $locked = KingdomItem::where('holder_hero_id', $hero->id)->orderBy('id')->lockForUpdate()->get();
                 foreach ($locked as $item) {
                     $this->takeOff($operation, $item);

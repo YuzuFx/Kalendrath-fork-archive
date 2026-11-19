@@ -2,13 +2,9 @@
 
 namespace OGame\Services\Pve;
 
-use Exception;
 use OGame\Enums\ItemSourceType;
 use OGame\GameMissions\BattleEngine\Models\BattleResult;
-use OGame\Models\Enums\PlanetType;
 use OGame\Models\KingdomItem;
-use OGame\Models\Planet\Coordinate;
-use OGame\Services\Items\KingdomItemService;
 use OGame\Services\Items\LootContext;
 use OGame\Services\Items\LootService;
 
@@ -30,21 +26,7 @@ class PveRaidLootService
     public function __construct(
         private readonly PveCampService $camps,
         private readonly LootService $loot,
-        private readonly KingdomItemService $items,
     ) {
-    }
-
-    /**
-     * Refuses an attack on a camp while the attacker's bag is full (same rule
-     * as the expedition: the loot may overflow the bag, the next raid waits).
-     *
-     * @throws Exception
-     */
-    public function assertCanRaid(int $attackerUserId, Coordinate $target, PlanetType $targetType): void
-    {
-        if ($this->camps->campAt($target, $targetType) !== null && $this->items->isBagFull($attackerUserId)) {
-            throw new Exception(__('t_items.error.inventory_full_raid'));
-        }
     }
 
     public static function isVictory(BattleResult $result): bool

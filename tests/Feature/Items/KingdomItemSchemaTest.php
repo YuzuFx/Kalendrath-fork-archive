@@ -44,6 +44,36 @@ class KingdomItemSchemaTest extends HeroTestCase
         $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update(['holder_hero_id' => $this->hero->id]));
     }
 
+    public function testAPositionWithoutHolderIsRejectedWhateverTheState(): void
+    {
+        $item = $this->give($this->user->id, $this->definition('test_helm'));
+
+        $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update(['equipped_slot' => 'head']));
+        $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update(['state' => 'destroyed', 'holder_hero_id' => $this->hero->id, 'equipped_slot' => 'head']));
+        $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update(['state' => 'equipped', 'holder_hero_id' => $this->hero->id]));
+    }
+
+    public function testWornItemLeavesTheEquippedStateWithBothFieldsCleared(): void
+    {
+        $item = $this->give($this->user->id, $this->definition('test_helm'));
+        resolve(HeroEquipmentService::class)->equip($this->hero, $item);
+
+        // equipped -> available while keeping the holder is a half-worn row.
+        $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update(['state' => 'available']));
+        DB::table('kingdom_items')->where('id', $item->id)->update(['state' => 'available', 'holder_hero_id' => null, 'equipped_slot' => null]);
+        $this->assertSame('available', DB::table('kingdom_items')->where('id', $item->id)->value('state'));
+    }
+
+    public function testCoreColumnsAreNotNull(): void
+    {
+        $item = $this->give($this->user->id, $this->definition('test_helm'));
+
+        foreach (['uid', 'state', 'owner_user_id', 'item_definition_id', 'created_operation_id'] as $column) {
+            $this->assertRejected(fn () => DB::table('kingdom_items')->where('id', $item->id)->update([$column => null]));
+        }
+        $this->assertRejected(fn () => DB::table('item_operations')->where('id', $item->created_operation_id)->update(['idempotency_key' => null]));
+    }
+
     public function testUnknownStateIsRejectedCaseSensitively(): void
     {
         $item = $this->give($this->user->id, $this->definition('test_helm'));

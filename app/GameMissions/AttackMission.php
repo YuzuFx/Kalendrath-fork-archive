@@ -20,6 +20,7 @@ use OGame\Models\Planet\Coordinate;
 use OGame\Models\Resources;
 use OGame\Services\CharacterClassService;
 use OGame\Services\DebrisFieldService;
+use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
 use OGame\Services\PlayerService;
@@ -83,14 +84,31 @@ class AttackMission extends GameMission
     }
 
     /**
+     * Kalendrath: an attack on a PvE camp may bring an item back, so its
+     * launch is serialised per kingdom with the inventory (PveLaunchGuard).
+     *
+     * @inheritdoc
+     */
+    public function start(PlanetService $planet, Coordinate $targetCoordinate, PlanetType $targetType, UnitCollection $units, Resources $resources, float $speedPercent, int $holdingHours = 0, int $parentId = 0, bool $retreatAfterDefenderRetreat = false): FleetMission
+    {
+        $start = fn (): FleetMission => parent::start($planet, $targetCoordinate, $targetType, $units, $resources, $speedPercent, $holdingHours, $parentId, $retreatAfterDefenderRetreat);
+        $guard = app(PveLaunchGuard::class);
+
+        return $guard->isCamp($targetCoordinate, $targetType) ? $guard->launch($planet->getPlayer()?->getId() ?? 0, $start) : $start();
+    }
+
+    /**
      * @inheritdoc
      */
     public function startMissionSanityChecks(PlanetService $planet, Coordinate $targetCoordinate, PlanetType $targetType, UnitCollection $units, Resources $resources): void
     {
         parent::startMissionSanityChecks($planet, $targetCoordinate, $targetType, $units, $resources);
 
-        // Kalendrath: no raid on a PvE camp while the item bag is full (loot may overflow it).
-        app(PveRaidLootService::class)->assertCanRaid($planet->getPlayer()?->getId() ?? 0, $targetCoordinate, $targetType);
+        // Kalendrath: no raid on a PvE camp while bag items + PvE missions in flight reach 32.
+        $guard = app(PveLaunchGuard::class);
+        if ($guard->isCamp($targetCoordinate, $targetType)) {
+            $guard->assertCanLaunch($planet->getPlayer()?->getId() ?? 0, 'raid');
+        }
     }
 
     /**
