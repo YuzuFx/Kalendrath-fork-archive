@@ -72,6 +72,10 @@ class ExpeditionItemLootTest extends FleetDispatchTestCase
     {
         $this->basicSetup();
         $hero = resolve(HeroRosterService::class)->recruitMain(User::findOrFail($this->currentUserId), HeroArchetype::WARRIOR, 'Hero');
+        // The loot band (level + 2) may drop a level 3 item: a level 3 hero
+        // can wear any of them (random draw, the test was flaky at level 1).
+        $hero->level = 3;
+        $hero->save();
 
         $this->sendExpedition();
         $arrival = FleetMission::where('user_id', $this->currentUserId)->where('mission_type', 15)->whereNull('parent_id')->latest('id')->firstOrFail();
