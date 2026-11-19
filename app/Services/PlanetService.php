@@ -24,6 +24,7 @@ use OGame\Models\ResearchQueue;
 use OGame\Models\Resource;
 use OGame\Models\Resources;
 use OGame\Models\UnitQueue;
+use OGame\Services\Hero\HeroEffectsResolver;
 use RuntimeException;
 use Throwable;
 
@@ -2374,6 +2375,7 @@ class PlanetService
         $object->production->planetService = $this;
         $object->production->playerService = $this->player;
         $object->production->characterClassService = app(CharacterClassService::class);
+        $object->production->heroEffects = app(HeroEffectsResolver::class);
         $object->production->universe_speed = $this->settingsService->economySpeed();
 
         return $object->production->calculate($object_level, $resource_production_factor * $building_percentage);

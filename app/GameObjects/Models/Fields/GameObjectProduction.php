@@ -11,6 +11,7 @@ use OGame\Services\{
     PlanetService,
     PlayerService,
 };
+use OGame\Services\Hero\HeroEffectsResolver;
 
 class GameObjectProduction
 {
@@ -84,6 +85,13 @@ class GameObjectProduction
     public ?CharacterClassService $characterClassService = null;
 
     /**
+     * Kalendrath hero effects (talents + equipment). NULL = no hero bonus.
+     *
+     * @var HeroEffectsResolver|null
+     */
+    public ?HeroEffectsResolver $heroEffects = null;
+
+    /**
      * The Universe speed, set by a server admin.
      *
      * @var int
@@ -128,6 +136,7 @@ class GameObjectProduction
         $this->calculateCrawlerProduction($productionIndex);
         $this->calculateCommandingStaff($productionIndex);
         $this->calculateItems($productionIndex);
+        $this->calculateHeroEffects($productionIndex);
         $this->calculateTotal($productionIndex);
 
         return $productionIndex;
@@ -563,5 +572,42 @@ class GameObjectProduction
         $productionIndex->total->add($productionIndex->crawler);
         $productionIndex->total->add($productionIndex->commanding_staff);
         $productionIndex->total->add($productionIndex->items);
+        $productionIndex->total->add($productionIndex->hero);
+    }
+
+    /**
+     * Calculates the Kalendrath hero bonus (production_bonus_percent of the
+     * talents and equipment reaching this city, capped on the final total).
+     * Additive on the base, like the Geologist: floor((mine + planet slot)
+     * x percent / 100), per resource. Targets: metal, crystal, deuterium
+     * (Wood, Iron, Mana); '*' = all three. Food (energy) is not affected.
+     *
+     * @param ProductionIndex $productionIndex
+     * @return void
+     */
+    private function calculateHeroEffects(ProductionIndex $productionIndex): void
+    {
+        if ($this->heroEffects === null) {
+            return;
+        }
+
+        $userId = $this->playerService->getId();
+        $planetId = $this->planetService->getPlanetId();
+
+        foreach (['metal', 'crystal', 'deuterium'] as $resource) {
+            $mine = $productionIndex->mine->{$resource}->get();
+            if ($mine <= 0) {
+                continue;
+            }
+
+            $percent = $this->heroEffects->forCity($userId, $planetId, 'production_bonus_percent', $resource);
+            if ($percent <= 0) {
+                continue;
+            }
+
+            $productionIndex->hero->{$resource}->set(
+                floor(($mine + $productionIndex->planet_slot->{$resource}->get()) * $percent / 100)
+            );
+        }
     }
 }

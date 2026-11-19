@@ -83,6 +83,14 @@ class ProductionIndex
      */
     public Resources $crawler;
 
+    /**
+     * Kalendrath hero bonus amount (talents + equipment, GDD 5.5).
+     * Kept apart from the upstream "items" component on purpose.
+     *
+     * @var Resources
+     */
+    public Resources $hero;
+
     public function __construct()
     {
         $this->basic = new Resources();
@@ -96,6 +104,7 @@ class ProductionIndex
         $this->items = new Resources();
         $this->character_class = new Resources();
         $this->crawler = new Resources();
+        $this->hero = new Resources();
     }
 
     /**
@@ -117,5 +126,6 @@ class ProductionIndex
         $this->items->add($productionIndex->items);
         $this->character_class->add($productionIndex->character_class);
         $this->crawler->add($productionIndex->crawler);
+        $this->hero->add($productionIndex->hero);
     }
 }
