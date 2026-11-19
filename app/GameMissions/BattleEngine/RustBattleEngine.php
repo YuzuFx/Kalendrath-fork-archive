@@ -12,7 +12,6 @@ use OGame\Services\CharacterClassService;
 use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
 use OGame\Services\SettingsService;
-use RuntimeException;
 use stdClass;
 
 /**
@@ -111,12 +110,14 @@ class RustBattleEngine extends BattleEngine
                     $rapidfire->{$targetUnit->id} = $rapidfireObject->amount;
                 }
 
+                // Kalendrath: research plus this army's own hero bonus.
+                $stats = $this->attackerUnitStats($attackerFleet, $unit->unitObject);
                 $attackerUnits->{$unit->unitObject->id} = (object)[
                     'unit_id' => $unit->unitObject->id,
                     'amount' => $unit->amount,
-                    'shield_points' => $unit->unitObject->properties->shield->calculate($attackerFleet->player)->totalValue,
-                    'attack_power' => $unit->unitObject->properties->attack->calculate($attackerFleet->player)->totalValue,
-                    'hull_plating' => floor($unit->unitObject->properties->structural_integrity->calculate($attackerFleet->player)->totalValue / 10),
+                    'shield_points' => $stats['shield'],
+                    'attack_power' => $stats['attack'],
+                    'hull_plating' => floor($stats['structural_integrity'] / 10),
                     'rapidfire' => $rapidfire,
                 ];
             }
@@ -128,13 +129,14 @@ class RustBattleEngine extends BattleEngine
             ];
         }
 
-        // Build defender fleets (planet owner + ACS defend fleets)
-        $defenderPlayer = $this->defenderPlanet->getPlayer();
-        if ($defenderPlayer === null) {
-            throw new RuntimeException('Battle defender planet has no owner.');
-        }
+        // Build defender fleets (planet owner + ACS defend fleets).
+        // Kalendrath: each defending army uses ITS OWN owner's research and
+        // heroes (upstream used the planet owner for every army, so an ally's
+        // reinforcements got the defender's research and would have got the
+        // defender's hero bonus; the PHP engine already did it per army).
         $defenderFleets = [];
         foreach ($result->defenderFleetResults as $fleetResult) {
+            $defenderFleet = $this->defenderFleetFor($fleetResult);
             $defenderUnits = new stdClass();
             foreach ($fleetResult->unitsStart->units as $unit) {
                 $rapidfire = new stdClass();
@@ -143,12 +145,13 @@ class RustBattleEngine extends BattleEngine
                     $rapidfire->{$targetUnit->id} = $rapidfireObject->amount;
                 }
 
+                $stats = $this->defenderUnitStats($defenderFleet, $unit->unitObject);
                 $defenderUnits->{$unit->unitObject->id} = (object)[
                     'unit_id' => $unit->unitObject->id,
                     'amount' => $unit->amount,
-                    'shield_points' => $unit->unitObject->properties->shield->calculate($defenderPlayer)->totalValue,
-                    'attack_power' => $unit->unitObject->properties->attack->calculate($defenderPlayer)->totalValue,
-                    'hull_plating' => floor($unit->unitObject->properties->structural_integrity->calculate($defenderPlayer)->totalValue / 10),
+                    'shield_points' => $stats['shield'],
+                    'attack_power' => $stats['attack'],
+                    'hull_plating' => floor($stats['structural_integrity'] / 10),
                     'rapidfire' => $rapidfire,
                 ];
             }

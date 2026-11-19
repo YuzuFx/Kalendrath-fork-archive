@@ -13,9 +13,11 @@ use OGame\GameMissions\BattleEngine\Services\DefenseRepairService;
 use OGame\GameMissions\BattleEngine\Services\LootService;
 use OGame\GameMissions\BattleEngine\Services\TacticalRetreatService;
 use OGame\GameObjects\Models\Enums\GameObjectType;
+use OGame\GameObjects\Models\UnitObject;
 use OGame\GameObjects\Models\Units\UnitCollection;
 use OGame\Models\Resources;
 use OGame\Services\CharacterClassService;
+use OGame\Services\Hero\HeroCombatEffects;
 use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
 use OGame\Services\PlayerService;
@@ -85,6 +87,68 @@ abstract class BattleEngine
     protected function getAttackerPlayer(): PlayerService
     {
         return $this->attackers[0]->player;
+    }
+
+    /**
+     * Battle values of one unit type of one attacking army (Kalendrath: plus
+     * the hero bonus of THIS army's owner, never another army's).
+     *
+     * @return array{structural_integrity: int, shield: int, attack: int}
+     */
+    protected function attackerUnitStats(AttackerFleet $fleet, UnitObject $unit): array
+    {
+        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, null);
+    }
+
+    /**
+     * Battle values of one unit type of one defending army: the planet
+     * owner's stationary garrison (with the governor's city effects) or an
+     * allied defending army (its own owner's research and heroes only).
+     *
+     * @return array{structural_integrity: int, shield: int, attack: int}
+     */
+    protected function defenderUnitStats(DefenderFleet $fleet, UnitObject $unit): array
+    {
+        $garrisonPlanetId = $fleet->fleetMissionId === 0 ? $this->defenderPlanet->getPlanetId() : null;
+
+        return app(HeroCombatEffects::class)->unitStats($unit, $fleet->player, $fleet->ownerId, $garrisonPlanetId);
+    }
+
+    /**
+     * The defending army a per-fleet result was created from.
+     */
+    protected function defenderFleetFor(DefenderFleetResult $fleetResult): DefenderFleet
+    {
+        foreach ($this->defenders as $defenderFleet) {
+            if ($defenderFleet->fleetMissionId === $fleetResult->fleetMissionId && $defenderFleet->ownerId === $fleetResult->ownerId) {
+                return $defenderFleet;
+            }
+        }
+
+        throw new RuntimeException('No defending fleet for fleet mission ' . $fleetResult->fleetMissionId . '.');
+    }
+
+    /**
+     * Battle values used by the engines, per side, army (fleet mission id)
+     * and unit machine name. Read-only view for tests and future reports.
+     *
+     * @return array{attackers: array<int, array<string, array{structural_integrity: int, shield: int, attack: int}>>, defenders: array<int, array<string, array{structural_integrity: int, shield: int, attack: int}>>}
+     */
+    public function armyCombatStats(): array
+    {
+        $stats = ['attackers' => [], 'defenders' => []];
+        foreach ($this->attackers as $fleet) {
+            foreach ($fleet->units->units as $unit) {
+                $stats['attackers'][$fleet->fleetMissionId][$unit->unitObject->machine_name] = $this->attackerUnitStats($fleet, $unit->unitObject);
+            }
+        }
+        foreach ($this->defenders as $fleet) {
+            foreach ($fleet->units->units as $unit) {
+                $stats['defenders'][$fleet->fleetMissionId][$unit->unitObject->machine_name] = $this->defenderUnitStats($fleet, $unit->unitObject);
+            }
+        }
+
+        return $stats;
     }
 
     /**

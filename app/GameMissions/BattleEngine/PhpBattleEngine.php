@@ -37,9 +37,8 @@ class PhpBattleEngine extends BattleEngine
             foreach ($attackerFleet->units->units as $unit) {
                 // Create new object for each unique unit in this fleet.
                 // Use THIS fleet owner's tech levels for calculations
-                $structuralIntegrity = $unit->unitObject->properties->structural_integrity->calculate($attackerFleet->player)->totalValue;
-                $shieldPoints = $unit->unitObject->properties->shield->calculate($attackerFleet->player)->totalValue;
-                $attackPower = $unit->unitObject->properties->attack->calculate($attackerFleet->player)->totalValue;
+                // Kalendrath: research plus this army's own hero bonus.
+                ['structural_integrity' => $structuralIntegrity, 'shield' => $shieldPoints, 'attack' => $attackPower] = $this->attackerUnitStats($attackerFleet, $unit->unitObject);
                 $unitObject = new BattleUnit($unit->unitObject, $structuralIntegrity, $shieldPoints, $attackPower, $attackerFleet->fleetMissionId, $attackerFleet->ownerId);
 
                 for ($i = 0; $i < $unit->amount; $i++) {
@@ -55,9 +54,8 @@ class PhpBattleEngine extends BattleEngine
             foreach ($defenderFleet->units->units as $unit) {
                 // Create new object for each unique unit type in this fleet
                 // Use THIS fleet owner's tech levels for calculations
-                $structuralIntegrity = $unit->unitObject->properties->structural_integrity->calculate($defenderFleet->player)->totalValue;
-                $shieldPoints = $unit->unitObject->properties->shield->calculate($defenderFleet->player)->totalValue;
-                $attackPower = $unit->unitObject->properties->attack->calculate($defenderFleet->player)->totalValue;
+                // Kalendrath: research plus this army's own hero bonus.
+                ['structural_integrity' => $structuralIntegrity, 'shield' => $shieldPoints, 'attack' => $attackPower] = $this->defenderUnitStats($defenderFleet, $unit->unitObject);
 
                 $unitObject = new BattleUnit(
                     $unit->unitObject,

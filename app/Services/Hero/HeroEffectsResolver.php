@@ -40,6 +40,29 @@ class HeroEffectsResolver
         return $this->effects->finalValue($this->effects->cityComponents($this->kingdoms[$userId], $planetId), $effectType, $target);
     }
 
+    /**
+     * Uncapped effects reaching one army (effect_type => target => total):
+     * the owner's empire effects, plus the city effects of the governor when
+     * the army is the stationary garrison of that city. Heroes accompanying
+     * an army (group scope, table fleet_mission_heroes) do not exist in the
+     * alpha. Empty without a query for a non-player (id <= 0).
+     *
+     * @return array<string, array<string, float>>
+     */
+    public function forArmy(int $ownerId, int|null $garrisonPlanetId): array
+    {
+        if ($ownerId <= 0) {
+            return [];
+        }
+
+        $this->kingdoms[$ownerId] ??= $this->effects->kingdom($ownerId);
+        if ($this->kingdoms[$ownerId] === []) {
+            return [];
+        }
+
+        return $this->effects->armyComponents($this->kingdoms[$ownerId], $garrisonPlanetId);
+    }
+
     public function forget(int $userId): void
     {
         unset($this->kingdoms[$userId]);

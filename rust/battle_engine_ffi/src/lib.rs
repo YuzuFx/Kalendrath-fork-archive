@@ -71,6 +71,12 @@ struct BattleUnitInstance {
     owner_id: u32,
     current_shield_points: f32,
     current_hull_plating: f32,
+    // Values of THIS unit's own fleet (Kalendrath): two fleets with the same
+    // unit type may differ (research, hero bonus), so they are not read from
+    // the per-unit-type metadata, which only keeps the last fleet's values.
+    attack_power: f32,
+    original_shield_points: f32,
+    original_hull_plating: f32,
 }
 
 /// Battle round which is used to keep track of the battle statistics for a single round.
@@ -264,7 +270,10 @@ fn expand_fleets(fleets: &Vec<impl FleetInput>) -> Vec<BattleUnitInstance> {
                     fleet_mission_id: fleet.get_fleet_mission_id(),
                     owner_id: fleet.get_owner_id(),
                     current_shield_points: unit.shield_points,
-                    current_hull_plating: unit.hull_plating
+                    current_hull_plating: unit.hull_plating,
+                    attack_power: unit.attack_power,
+                    original_shield_points: unit.shield_points,
+                    original_hull_plating: unit.hull_plating,
                 });
             }
         }
@@ -385,7 +394,7 @@ fn process_combat(
     defenders: &mut Vec<BattleUnitInstance>,
     round: &mut BattleRound,
     attacker_unit_metadata: &HashMap<i16, BattleUnitInfo>,
-    defender_unit_metadata: &HashMap<i16, BattleUnitInfo>,
+    _defender_unit_metadata: &HashMap<i16, BattleUnitInfo>,
     is_attacker: bool,
 ) {
     let mut rng = rand::thread_rng();
@@ -395,7 +404,7 @@ fn process_combat(
 
         // Get metadata of the attacking unit.
         let attacker_metadata = attacker_unit_metadata.get(&attacker.unit_id).unwrap();
-        let damage = attacker_metadata.attack_power;
+        let damage = attacker.attack_power;
 
         while continue_attacking {
             continue_attacking = false;
@@ -404,12 +413,9 @@ fn process_combat(
             let target_idx = rng.gen_range(0..defenders.len());
             let target = &mut defenders[target_idx];
 
-            // Get metadata of the defending unit.
-            let target_metadata = defender_unit_metadata.get(&target.unit_id).unwrap();
-
             // Check if the damage is less than 1% of the target's shield points. If so,
             // attack is negated.
-            if damage < (0.01 * target_metadata.shield_points) {
+            if damage < (0.01 * target.original_shield_points) {
                 continue
             }
 
@@ -429,8 +435,8 @@ fn process_combat(
             }
 
             // If hull integrity < 70%, then unit can explode randomly. Roll dice to see if it does.
-            if target.current_hull_plating / target_metadata.hull_plating < 0.7 {
-                let explosion_chance = 100.0 - ((target.current_hull_plating / target_metadata.hull_plating) * 100.0);
+            if target.current_hull_plating / target.original_hull_plating < 0.7 {
+                let explosion_chance = 100.0 - ((target.current_hull_plating / target.original_hull_plating) * 100.0);
                 let roll = rng.gen_range(0..=100);
                 if roll < explosion_chance as i32 {
                     // Unit explodes, set current hull plating and shield points to 0.
@@ -485,8 +491,8 @@ fn cleanup_round(
     round: &mut BattleRound,
     attackers: &mut Vec<BattleUnitInstance>,
     defenders: &mut Vec<BattleUnitInstance>,
-    units_metadata_attacker: &HashMap<i16, BattleUnitInfo>,
-    units_metadata_defender: &HashMap<i16, BattleUnitInfo>,
+    _units_metadata_attacker: &HashMap<i16, BattleUnitInfo>,
+    _units_metadata_defender: &HashMap<i16, BattleUnitInfo>,
 ) {
     // -------
     // Cleanup attacker units.
@@ -504,8 +510,7 @@ fn cleanup_round(
 
     // Then update shields in separate pass
     for unit in attackers.iter_mut() {
-        let unit_metadata = units_metadata_attacker.get(&unit.unit_id).unwrap();
-        unit.current_shield_points = unit_metadata.shield_points;
+        unit.current_shield_points = unit.original_shield_points;
     }
 
     // -------
@@ -524,8 +529,7 @@ fn cleanup_round(
 
     // Then update shields in separate pass for remaining units.
     for unit in defenders.iter_mut() {
-        let unit_metadata = units_metadata_defender.get(&unit.unit_id).unwrap();
-        unit.current_shield_points = unit_metadata.shield_points;
+        unit.current_shield_points = unit.original_shield_points;
     }
 }
 

@@ -180,6 +180,20 @@ class HeroEffectsService
     }
 
     /**
+     * Uncapped effects that reach one army: empire effects of the kingdom,
+     * plus the city effects of the governor when the army is the stationary
+     * garrison of the governed city. Moving armies (attackers, allied
+     * reinforcements) never receive city effects.
+     *
+     * @param list<array{role: HeroRole, planet_id: int|null, effects: array<string, array<string, array<string, float>>>}> $kingdom
+     * @return array<string, array<string, float>> effect_type => target => total
+     */
+    public function armyComponents(array $kingdom, int|null $garrisonPlanetId): array
+    {
+        return $garrisonPlanetId !== null ? $this->cityComponents($kingdom, $garrisonPlanetId) : $this->empireComponents($kingdom);
+    }
+
+    /**
      * Final bonus on one axis and one target: whole-axis effects plus the
      * effects aimed at this target, capped ONCE on the final total.
      *

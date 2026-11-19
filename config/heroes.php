@@ -55,6 +55,9 @@ return [
         'wounded_recovery_bonus_percent' => 25,
         'fuel_consumption_reduction_percent' => 20,
         'troop_combat_bonus_percent' => 15,
+        // Shield and hull of the governed city's garrison. Not in the GDD
+        // table: aligned on the troop axis by default (to be confirmed).
+        'garrison_defense_bonus_percent' => 15,
         'mission_travel_time_reduction_percent' => 15,
         'build_research_time_reduction_percent' => 15,
         'production_bonus_percent' => 10,

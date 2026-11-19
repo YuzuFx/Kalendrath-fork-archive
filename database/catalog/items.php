@@ -16,8 +16,9 @@
 | classes (heavy = Warrior, arcane = Sorcerer) plus "any" jewels and cloaks,
 | a few items per slot type, cautious values well under the axis caps.
 | Displayed names are provisional (resources/lang/{fr,en}/t_items.php).
-| troop_combat_bonus_percent and garrison_defense_bonus_percent are inert
-| until the combat lot (lot 2) wires them into the battle engines.
+| troop_combat_bonus_percent (troops of the army) and
+| garrison_defense_bonus_percent (garrison of the governed city) apply in
+| battle army by army since lot 2 (OGame\Services\Hero\HeroCombatEffects).
 */
 return [
     'head_warden_helm' => [
