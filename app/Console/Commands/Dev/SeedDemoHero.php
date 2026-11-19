@@ -5,18 +5,22 @@ namespace OGame\Console\Commands\Dev;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
-use OGame\Enums\EquipmentRarity;
+use Illuminate\Support\Str;
+use OGame\Enums\ItemSourceType;
 use OGame\Enums\TalentEffectScope;
-use OGame\Models\EquipmentItem;
 use OGame\Models\Hero;
-use OGame\Models\HeroEquipment;
 use OGame\Models\HeroTalent;
+use OGame\Models\ItemDefinition;
+use OGame\Models\KingdomItem;
 use OGame\Models\TalentNode;
 use OGame\Models\User;
+use OGame\Services\Hero\HeroEquipmentService;
+use OGame\Services\Items\ItemCatalogService;
+use OGame\Services\Items\KingdomItemService;
 
 /**
  * Seeds a single demo hero ("John Doe") with a full 3-branch talent tree
- * and a full set of equipment items across all 8 slots, to serve as a
+ * and kingdom items from the starter catalog (worn and in the bag), to serve as a
  * visual reference for the hero sheet UI (talent tree layout, Diablo-style
  * paper-doll inventory). Recreates everything on each run.
  *
@@ -31,10 +35,12 @@ class SeedDemoHero extends Command
 {
     private const string ARCHETYPE = 'warrior';
 
+    private const string DEMO_SOURCE_REF = 'demo_seed';
+
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(ItemCatalogService $catalog, KingdomItemService $items, HeroEquipmentService $equipment): int
     {
         $username = (string) $this->option('username');
         $user = User::where('username', $username)->first();
@@ -45,9 +51,19 @@ class SeedDemoHero extends Command
         }
 
         $talentNodes = $this->seedTalentTree();
-        $equipmentItems = $this->seedEquipmentItems();
 
-        // Recreate on each run for idempotency.
+        // The item catalog is the versioned starter catalog (database/catalog/items.php).
+        $catalog->sync();
+
+        // Recreate on each run for idempotency. Items belong to the kingdom:
+        // take off what the old demo hero wears, drop the demo items, then the hero.
+        foreach (Hero::where('user_id', $user->id)->where('name', 'John Doe')->get() as $oldHero) {
+            $equipment->unequipAll($oldHero, 'demo_seed:' . $oldHero->id . ':unequip_all:' . Str::ulid());
+        }
+        KingdomItem::where('owner_user_id', $user->id)
+            ->where('source_type', ItemSourceType::ADMIN->value)
+            ->where('source_ref', self::DEMO_SOURCE_REF)
+            ->delete();
         Hero::where('user_id', $user->id)->where('name', 'John Doe')->delete();
 
         $hero = Hero::create([
@@ -98,17 +114,28 @@ class SeedDemoHero extends Command
             ]);
         }
 
-        // Equip 4 of the 8 slots, leave the rest owned but in the
-        // inventory grid, so the sheet shows both states at once.
-        $equippedSlots = ['weapon_main_hand', 'weapon_off_hand', 'chest', 'head'];
+        // Every Warrior-wearable item of the catalog goes to the kingdom; one
+        // per position is worn up to six, the rest stays in the bag, so the
+        // sheet shows both states at once.
+        $worn = 0;
+        $definitions = ItemDefinition::whereIn('equip_class', $equipment->allowedClasses(self::ARCHETYPE))
+            ->whereNull('retired_at')
+            ->orderBy('id')
+            ->get();
+        foreach ($definitions as $definition) {
+            $item = $items->grant(
+                $user->id,
+                $definition,
+                ItemSourceType::ADMIN,
+                self::DEMO_SOURCE_REF,
+                'demo_seed:' . $hero->id . ':' . $definition->code,
+            );
 
-        foreach ($equipmentItems as $item) {
-            HeroEquipment::create([
-                'hero_id' => $hero->id,
-                'equipment_item_id' => $item->id,
-                'equipped' => in_array($item->slot, $equippedSlots, true),
-                'slot' => in_array($item->slot, $equippedSlots, true) ? $item->slot : null,
-            ]);
+            $position = $definition->slot_type?->positions()[0] ?? null;
+            if ($worn < 6 && $position !== null && !$hero->equippedItems()->where('equipped_slot', $position->value)->exists()) {
+                $equipment->equip($hero, $item, null, 'demo_seed:' . $hero->id . ':equip:' . $definition->code);
+                $worn++;
+            }
         }
 
         $this->info('--------------------------------');
@@ -317,46 +344,5 @@ class SeedDemoHero extends Command
             'serment_t4_right' => $t4Right,
             'serment_t5' => $t5,
         ];
-    }
-
-    /**
-     * Seeds one demo equipment item per slot (8 total), across a spread of
-     * rarities, to fill out the paper-doll + inventory grid demo.
-     *
-     * @return array<int, EquipmentItem>
-     */
-    private function seedEquipmentItems(): array
-    {
-        $demoNames = [
-            'Heaume du Gardien Déchu',
-            'Cuirasse des Ruines Elfiques',
-            'Gantelets du Serment Rompu',
-            'Ceinturon de Toile d\'Ombre',
-            'Jambières de l\'Éclat Oublié',
-            'Bottes du Passeur de Straumar',
-            'Tranche-Brume, Lame des Vahrun',
-            'Bouclier du Dernier Rempart',
-        ];
-        EquipmentItem::whereIn('name', $demoNames)->delete();
-
-        $definitions = [
-            ['name' => 'Heaume du Gardien Déchu', 'slot' => 'head', 'rarity' => EquipmentRarity::RARE, 'description' => 'Porté par un gardien tombé aux frontières du Gouffre.'],
-            ['name' => 'Cuirasse des Ruines Elfiques', 'slot' => 'chest', 'rarity' => EquipmentRarity::EPIC, 'description' => 'Forgée avant la Rupture, encore chargée de mana résiduel.'],
-            ['name' => 'Gantelets du Serment Rompu', 'slot' => 'hands', 'rarity' => EquipmentRarity::UNCOMMON, 'description' => 'Marqués du sceau des nains qui refusèrent la Grande Conjonction.'],
-            ['name' => 'Ceinturon de Toile d\'Ombre', 'slot' => 'belt', 'rarity' => EquipmentRarity::COMMON, 'description' => 'Tissé à partir de fibres récupérées sur un Éclat isolé.'],
-            ['name' => 'Jambières de l\'Éclat Oublié', 'slot' => 'legs', 'rarity' => EquipmentRarity::UNCOMMON, 'description' => 'Récupérées sur un Éclat que plus personne ne sait situer.'],
-            ['name' => 'Bottes du Passeur de Straumar', 'slot' => 'boots', 'rarity' => EquipmentRarity::RARE, 'description' => 'Permettent de sentir la proximité d\'un Straumr sous ses pieds.'],
-            ['name' => 'Tranche-Brume, Lame des Vahrun', 'slot' => 'weapon_main_hand', 'rarity' => EquipmentRarity::LEGENDARY, 'description' => 'Une lame dont l\'origine exacte glace le sang de ceux qui la reconnaissent.'],
-            ['name' => 'Bouclier du Dernier Rempart', 'slot' => 'weapon_off_hand', 'rarity' => EquipmentRarity::COMMON, 'description' => 'Un bouclier robuste, sans histoire particulière — pour l\'instant.'],
-        ];
-
-        return collect($definitions)
-            ->map(fn (array $def) => EquipmentItem::create([
-                'name' => $def['name'],
-                'slot' => $def['slot'],
-                'rarity' => $def['rarity']->value,
-                'description' => $def['description'],
-            ]))
-            ->all();
     }
 }

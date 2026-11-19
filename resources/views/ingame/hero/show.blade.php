@@ -6,8 +6,9 @@
 
     @php
         $hero = $card['hero'];
-        $paperDollSlots = ['head', 'weapon_off_hand', 'chest', 'weapon_main_hand', 'hands', 'belt', 'legs', 'boots'];
-        $equippedBySlot = $equipped->keyBy(fn ($e) => $e->equipmentItem->slot);
+        // Kept working until the React hero screen replaces it (no new feature here).
+        $paperDollSlots = array_map(fn ($slot) => $slot->value, \OGame\Enums\EquipmentSlot::cases());
+        $equippedBySlot = $equipped->keyBy(fn ($e) => $e->equipped_slot->value);
         $primaryStats = ['strength', 'intelligence', 'willpower', 'dexterity'];
         $derivedStats = ['attack_power', 'armor', 'life'];
     @endphp
@@ -92,17 +93,21 @@
             grid-template-columns: 76px 76px 76px;
             grid-template-rows: repeat(5, 76px);
             grid-template-areas:
-                ".    head    ."
-                "woff chest   wmain"
-                "hands .      belt"
-                ".    legs    ."
-                ".    boots   .";
+                "neck  head  shoulders"
+                "cloak chest wrists"
+                "hands belt  ring1"
+                ".     legs  ring2"
+                ".     boots .";
             gap: 6px;
         }
         .slot-head { grid-area: head; }
-        .slot-weapon_off_hand { grid-area: woff; }
+        .slot-neck { grid-area: neck; }
+        .slot-shoulders { grid-area: shoulders; }
+        .slot-cloak { grid-area: cloak; }
         .slot-chest { grid-area: chest; }
-        .slot-weapon_main_hand { grid-area: wmain; }
+        .slot-wrists { grid-area: wrists; }
+        .slot-ring_1 { grid-area: ring1; }
+        .slot-ring_2 { grid-area: ring2; }
         .slot-hands { grid-area: hands; }
         .slot-belt { grid-area: belt; }
         .slot-legs { grid-area: legs; }
@@ -221,10 +226,10 @@
                                     @foreach ($paperDollSlots as $slot)
                                         @php $item = $equippedBySlot->get($slot); @endphp
                                         <div class="equip-slot slot-{{ $slot }} {{ $item ? 'equip-slot--filled' : '' }}"
-                                             style="{{ $item ? 'border-color:' . $item->equipmentItem->rarityEnum->getColor() . '; box-shadow: 0 0 8px ' . $item->equipmentItem->rarityEnum->getColor() . '55;' : '' }}"
-                                             title="{{ $item ? $item->equipmentItem->name . ' (' . $item->equipmentItem->rarityEnum->getName() . ')' : __('t_heroes.slot.' . $slot) }}">
+                                             style="{{ $item ? 'border-color:' . $item->definition->rarityEnum()->getColor() . '; box-shadow: 0 0 8px ' . $item->definition->rarityEnum()->getColor() . '55;' : '' }}"
+                                             title="{{ $item ? $item->definition->getName() . ' (' . __('t_items.rarity.' . $item->definition->rarity) . ')' : __('t_heroes.slot.' . $slot) }}">
                                             @if ($item)
-                                                <span style="color:{{ $item->equipmentItem->rarityEnum->getColor() }};">{{ $item->equipmentItem->name }}</span>
+                                                <span style="color:{{ $item->definition->rarityEnum()->getColor() }};">{{ $item->definition->getName() }}</span>
                                             @else
                                                 <span>{{ __('t_heroes.slot.' . $slot) }}</span>
                                             @endif
@@ -239,8 +244,8 @@
                                     @else
                                         <div class="inventory-grid">
                                             @foreach ($inventory as $item)
-                                                <div class="inventory-slot" style="border-color:{{ $item->equipmentItem->rarityEnum->getColor() }};" title="{{ $item->equipmentItem->name }} ({{ $item->equipmentItem->rarityEnum->getName() }})">
-                                                    <span style="color:{{ $item->equipmentItem->rarityEnum->getColor() }};">{{ $item->equipmentItem->name }}</span>
+                                                <div class="inventory-slot" style="border-color:{{ $item->definition->rarityEnum()->getColor() }};" title="{{ $item->definition->getName() }} ({{ __('t_items.rarity.' . $item->definition->rarity) }})">
+                                                    <span style="color:{{ $item->definition->rarityEnum()->getColor() }};">{{ $item->definition->getName() }}</span>
                                                 </div>
                                             @endforeach
                                         </div>

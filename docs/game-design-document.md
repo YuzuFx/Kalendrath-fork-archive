@@ -532,6 +532,7 @@ Reaper (`reaper`) reste **[TBD]** — vaisseau spécifique à la classe héros G
     - Nombre de branches (3, confirmé), schéma exact des tiers par archétype, et la liste complète des vrais talents (au-delà de la démo Guerrier) restent à écrire archétype par archétype.
 - **Fiche héros façon Diablo** — cadrée le 2026-09-16, construite le 2026-09-18 sur `/heroes/{id}` :
   - **Panneau de statistiques** : 4 caractéristiques primaires (Force, Intelligence, Volonté, Dextérité) + 3 statistiques dérivées affichées en avant (Puissance d'attaque, Armure, Vie). Squelette posé (colonnes sur `heroes`), valeurs de démo saisies à plat pour l'instant — **[TBD]** la formule de calcul des stats dérivées à partir des primaires, et la courbe de croissance par niveau/archétype (Phase 6, équilibrage).
+  - **Révisé le 2026-11-19 (décision de Gregory, contrat d'alpha)** : **12 emplacements** — tête, collier, épaules, cape, torse, poignets, mains, ceinture, jambes, pieds, deux anneaux ; plus d'emplacement d'arme. Les objets appartiennent au **royaume** (inventaire de 32 places, objets portés non comptés), le héros les porte. Implémenté dans `app/Enums/EquipmentSlot.php` (positions) et `EquipmentSlotType.php` (types), tables `item_definitions` / `kingdom_items`. La description ci-dessous (8 emplacements) est historique.
   - **Inventaire en "paper doll"** façon Diablo : 8 emplacements équipables disposés en silhouette (Tête en haut ; Arme main gauche / Torse / Arme main droite au centre ; Mains / Ceinture ; Jambes ; Bottes en bas), + grille d'inventaire pour les objets possédés non équipés. Objets colorés/surlignés selon leur rareté (5 paliers déjà posés en 5.7). Les sockets/runes visibles sur les captures de référence (Diablo IV) ne sont **pas** repris — hors périmètre de cette passe, à revisiter si le craft/forge (5.7) en a besoin plus tard.
   - **Direction artistique retenue (2026-09-18)** : ambiance **arcane mystique sombre**, cohérente avec le lore (Straumar, mana, ruines anciennes) — fond quasi noir, accents bleu/violet lumineux façon runes, halo lumineux sur les éléments actifs (talents investis, objets équipés). Typographie des titres en **Cinzel** (Google Fonts). Sert de premier repère visuel avant le reskin complet (Phase 3), pas un design final.
 - **Avatar de héros** : emplacement réservé sur la carte et la fiche héros (colonne `avatar`, nullable) — aucun pipeline d'assets graphiques pour l'instant, juste l'espace UI.
@@ -561,7 +562,7 @@ Reaper (`reaper`) reste **[TBD]** — vaisseau spécifique à la classe héros G
 *Déjà cadré — synthèse :*
 
 - Système **hybride** : ressources + plans/recettes débloqués **et** composants rares lootés en PvE
-- **Équipement de héros par slots — décidé le 2026-09-18** : Tête, Torse, Mains, Ceinture, Jambes, Bottes, + 2 emplacements d'arme (main gauche / main droite). 8 emplacements au total.
+- **Équipement de héros par slots — décidé le 2026-09-18** : Tête, Torse, Mains, Ceinture, Jambes, Bottes, + 2 emplacements d'arme (main gauche / main droite). 8 emplacements au total. **Remplacé le 2026-11-19** par 12 emplacements sans arme (cf. 5.5).
 - **[TBD]** — Table de recettes, source précise des composants rares (quels donjons/missions les droppent)
 
 **Tiers de rareté — cadré le 2026-09-15 :**

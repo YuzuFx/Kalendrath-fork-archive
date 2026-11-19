@@ -4,7 +4,9 @@ namespace OGame\Http\Controllers;
 
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
+use OGame\Enums\KingdomItemState;
 use OGame\Models\Hero;
+use OGame\Models\KingdomItem;
 use OGame\Models\TalentNode;
 use OGame\Services\HeroLevelingService;
 
@@ -48,10 +50,15 @@ class HeroController extends OGameController
 
         $this->setBodyId('heroes');
 
-        $hero->load(['talents', 'equipment.equipmentItem']);
+        $hero->load(['talents']);
 
-        $equipped = $hero->equipment->where('equipped', true);
-        $inventory = $hero->equipment->where('equipped', false);
+        // Items belong to the kingdom: worn by this hero, or in the kingdom's bag.
+        $equipped = $hero->equippedItems()->with('definition')->get();
+        $inventory = KingdomItem::where('owner_user_id', $hero->user_id)
+            ->where('state', KingdomItemState::AVAILABLE->value)
+            ->with('definition')
+            ->orderBy('id')
+            ->get();
 
         // Full tree for this hero's archetype, with the hero's allocated
         // rank (0 if not yet invested) attached to each node. A null branch
