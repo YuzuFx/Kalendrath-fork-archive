@@ -4,6 +4,7 @@ namespace Tests\Feature\Items;
 
 use Exception;
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use OGame\Enums\HeroArchetype;
 use OGame\Enums\ItemSourceType;
 use OGame\Enums\KingdomItemState;
@@ -165,6 +166,30 @@ class ExpeditionItemLootTest extends FleetDispatchTestCase
         resolve(KingdomItemService::class)->discard($this->currentUserId, $kept, 'test:discard:' . $kept->id);
         $this->sendExpedition();
         $this->assertSame(2, $outbound());
+    }
+
+    public function testTheItemOutcomeIsReachableByDefault(): void
+    {
+        $migration = require base_path('database/migrations/2026_11_19_000007_set_expedition_item_weight_default.php');
+        $value = fn (): string|null => DB::table('settings')->where('key', 'expedition_weight_items')->value('value');
+
+        // Upstream seed (0) or no row: the migration sets the provisional 5.
+        DB::table('settings')->updateOrInsert(['key' => 'expedition_weight_items'], ['value' => '0']);
+        $migration->up();
+        $this->assertSame('5', $value());
+        DB::table('settings')->where('key', 'expedition_weight_items')->delete();
+        $migration->up();
+        $this->assertSame('5', $value());
+        $this->assertSame(5.0, (new SettingsService())->expeditionWeightItems());
+
+        // A value set in the administration is kept.
+        DB::table('settings')->where('key', 'expedition_weight_items')->update(['value' => '7']);
+        $migration->up();
+        $this->assertSame('7', $value());
+
+        // Without any row, the service default is positive too.
+        DB::table('settings')->where('key', 'expedition_weight_items')->delete();
+        $this->assertGreaterThan(0.0, (new SettingsService())->expeditionWeightItems());
     }
 
     public function testNoEligibleItemFallsBackToAFailedExpedition(): void
