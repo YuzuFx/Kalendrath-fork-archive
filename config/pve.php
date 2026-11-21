@@ -28,6 +28,31 @@ return [
         ],
     ],
 
+    'retaliation' => [
+        'enabled' => env('PVE_RETALIATION_ENABLED', true),
+        'preparation_hours' => 8,
+        'max_travel_minutes' => 120,
+        'max_processing_delay_minutes' => 15,
+        'camp_cooldown_hours' => 12,
+        'target_attempts_24h' => 1,
+        'target_attempts_168h' => 2,
+        'min_account_age_hours' => 72,
+        'min_city_age_hours' => 24,
+        'min_defense_wood_equivalent' => 60000,
+        'max_combat_axis_ratio' => 0.60,
+        'max_detachment_share' => 0.25,
+        'min_garrison_reserve_share' => 0.50,
+        'max_fuel_stock_share' => 0.10,
+        'max_loot_stock_share' => 0.10,
+        'protected_production_hours' => 6,
+        'max_loot_production_hours_per_hit' => 2,
+        'max_loot_production_hours_24h' => 2,
+        'max_loot_production_hours_168h' => 4,
+        'max_unit_loss_share_per_hit' => 0.10,
+        'max_unit_loss_share_24h' => 0.10,
+        'max_unit_loss_share_168h' => 0.20,
+    ],
+
     // Positions where camps are spawned when no coordinate is given: outside
     // the 4-12 range the allocator gives to new players.
     'spawn_positions' => [1, 2, 3, 13, 14, 15],

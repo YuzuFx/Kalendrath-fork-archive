@@ -3,6 +3,7 @@
 namespace Tests\Feature\Items;
 
 use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\PendingCommand;
 use OGame\Enums\HeroArchetype;
 use OGame\Enums\ItemSourceType;
@@ -32,6 +33,7 @@ use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
 use OGame\Services\Pve\PveCampService;
 use OGame\Services\Pve\PveRaidLootService;
+use OGame\Services\Pve\PveRetaliationRecorder;
 use OGame\Services\SettingsService;
 use Tests\FleetDispatchTestCase;
 
@@ -166,6 +168,60 @@ class PveRaidLootTest extends FleetDispatchTestCase
         $this->assertMessageReceivedAndContains('fleets', 'combat_reports', [(string) __('t_items.item.' . $item->definition->code . '.name')]);
     }
 
+    public function testVictoryWithResourcesRecordsAnInertIntentOnceEvenWithoutItemLoot(): void
+    {
+        $this->basicSetup();
+        config(['pve.retaliation.enabled' => true]);
+        resolve(SettingsService::class)->set('loot_item_rate_multiplier', '0');
+        $camp = $this->spawnCamp();
+
+        $mission = $this->raid();
+        $this->assertNotNull($mission);
+        $this->resolveArrival($mission);
+
+        $intents = DB::table('pve_retaliation_intents')->where('source_mission_id', $mission->id);
+        $this->assertDatabaseHas('pve_retaliation_intents', [
+            'source_mission_id' => $mission->id,
+            'camp_id' => $camp->id,
+            'target_user_id' => $this->currentUserId,
+            'target_planet_id' => $mission->planet_id_from,
+            'target_galaxy' => $mission->galaxy_from,
+            'target_system' => $mission->system_from,
+            'target_position' => $mission->position_from,
+        ]);
+
+        $units = new UnitCollection();
+        $units->addUnit(ObjectService::getUnitObjectByMachineName('light_fighter'), 1);
+        $army = new AttackerFleetResult($mission->id, $this->currentUserId, $units);
+        $army->unitsResult = $units;
+        $army->lootShare = new Resources(1, 0, 0, 0);
+        $result = new BattleResult();
+        $result->attackerFleetResults = [$army];
+        $result->attackerUnitsResult = $units;
+        $result->defenderUnitsStart = $units;
+        $result->defenderUnitsResult = new UnitCollection();
+
+        $report = (int) $intents->value('source_battle_report_id');
+        resolve(PveRetaliationRecorder::class)->record($mission, $result, $report + 1);
+        $this->assertSame(1, $intents->count());
+        $this->assertEquals($report, $intents->value('source_battle_report_id'));
+        $this->assertDatabaseCount('kingdom_items', 0);
+    }
+
+    public function testDisablingRetaliationKeepsTheOutgoingRaidReward(): void
+    {
+        $this->basicSetup();
+        config(['pve.retaliation.enabled' => false]);
+        $this->spawnCamp();
+
+        $mission = $this->raid();
+        $this->assertNotNull($mission);
+        $this->resolveArrival($mission);
+
+        $this->assertDatabaseMissing('pve_retaliation_intents', ['source_mission_id' => $mission->id]);
+        $this->assertDatabaseHas('kingdom_items', ['owner_user_id' => $this->currentUserId, 'source_ref' => (string) $mission->id]);
+    }
+
     public function testTheBattleReportKeepsTheHeroModifiersOfEachArmy(): void
     {
         $this->basicSetup();
@@ -234,6 +290,7 @@ class PveRaidLootTest extends FleetDispatchTestCase
 
         $this->assertSame(0, KingdomItem::where('owner_user_id', $this->currentUserId)->count());
         $this->assertSame(0, ItemOperation::where('idempotency_key', 'pve_raid:' . $mission->id . ':loot')->count());
+        $this->assertDatabaseMissing('pve_retaliation_intents', ['source_mission_id' => $mission->id]);
     }
 
     public function testAttackingAPlayerNeverGivesAnItem(): void
@@ -249,6 +306,7 @@ class PveRaidLootTest extends FleetDispatchTestCase
 
         $this->assertSame(0, KingdomItem::where('owner_user_id', $this->currentUserId)->count());
         $this->assertSame(0, ItemOperation::where('idempotency_key', 'pve_raid:' . $mission->id . ':loot')->count());
+        $this->assertDatabaseMissing('pve_retaliation_intents', ['source_mission_id' => $mission->id]);
     }
 
     public function testAZeroMultiplierJournalsTheRollWithoutAnItem(): void

@@ -26,6 +26,7 @@ use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
 use OGame\Services\PlayerService;
 use OGame\Services\Pve\PveRaidLootService;
+use OGame\Services\Pve\PveRetaliationRecorder;
 use OGame\Services\WreckFieldService;
 use RuntimeException;
 use Throwable;
@@ -586,6 +587,7 @@ class AttackMission extends GameMission
             }
 
             $this->startReturn($mission, $totalResources, $battleResult->attackerUnitsResult, 0, $attackerWreckFieldData);
+            app(PveRetaliationRecorder::class)->record($mission, $battleResult, $reportId);
         }
         // End of single-attacker return processing
         // Note: For multi-attacker battles, each fleet is already processed above with its own return mission
