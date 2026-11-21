@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use OGame\Enums\TalentEffectScope;
@@ -24,26 +25,22 @@ use OGame\Enums\TalentEffectScope;
  * @property int $max_rank
  * @property string|null $choice_group
  */
+#[Fillable([
+    'archetype',
+    'branch',
+    'name',
+    'description',
+    'effect_type',
+    'effect_value',
+    'effect_scope',
+    'tier',
+    'position',
+    'point_cost',
+    'max_rank',
+    'choice_group',
+])]
 class TalentNode extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'archetype',
-        'branch',
-        'name',
-        'description',
-        'effect_type',
-        'effect_value',
-        'effect_scope',
-        'tier',
-        'position',
-        'point_cost',
-        'max_rank',
-        'choice_group',
-    ];
-
     /**
      * @return array<string, string>
      */

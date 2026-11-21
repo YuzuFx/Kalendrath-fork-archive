@@ -2,6 +2,8 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -13,25 +15,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $talent_node_id
  * @property int $rank
  */
+#[Fillable([
+    'hero_id',
+    'talent_node_id',
+    'rank',
+])]
+#[Table(name: 'hero_talents')]
 class HeroTalent extends Model
 {
-    /**
-     * Explicit table name: Eloquent's default pluralization does not
-     * pluralize "Talent" reliably in this combination.
-     *
-     * @var string
-     */
-    protected $table = 'hero_talents';
-
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'hero_id',
-        'talent_node_id',
-        'rank',
-    ];
-
     /**
      * @return BelongsTo
      */

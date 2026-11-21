@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use OGame\Enums\EquipmentRarity;
@@ -17,18 +18,14 @@ use OGame\Enums\EquipmentRarity;
  * @property int $rarity
  * @property string|null $description
  */
+#[Fillable([
+    'name',
+    'slot',
+    'rarity',
+    'description',
+])]
 class EquipmentItem extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'slot',
-        'rarity',
-        'description',
-    ];
-
     /**
      * @return Attribute<EquipmentRarity, int>
      */
