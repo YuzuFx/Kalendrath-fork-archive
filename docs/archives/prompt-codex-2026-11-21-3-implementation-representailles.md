@@ -1,6 +1,6 @@
 # Prompt Codex n° 3 : implémentation des représailles des camps PvE (2026-11-21)
 
-*À coller dans Codex. **Facultatif si le budget manque** : Claude peut aussi l'implémenter. Décision de Gregory (2026-11-21) : on implémente au plus vite et on équilibre pendant l'alpha avec les retours des joueurs ; le passage au simulateur recommandé dans le rapport de conception n'est donc **pas un préalable**, mais tous les paramètres restent réglables. Branche : `feat/representailles-pve`, créée depuis `feat/alpha-objets` après commit de l'état actuel. Pousser avant de s'arrêter.*
+*À coller dans Codex. **Facultatif si le budget manque** : Claude peut aussi l'implémenter. Décision de Gregory (2026-11-21) : on implémente au plus vite et on équilibre pendant l'alpha avec les retours des joueurs ; le passage au simulateur recommandé dans le rapport de conception n'est donc **pas un préalable**, mais tous les paramètres restent réglables. Branche : `feat/representailles-pve`, créée depuis `feat/alpha-visuels-equipements` (qui contient déjà le catalogue, les visuels et la fusion de `main`). Pousser avant de s'arrêter.*
 
 ---
 
