@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -14,17 +15,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $equipment_item_id
  * @property bool $equipped
  */
+#[Fillable([
+    'hero_id',
+    'equipment_item_id',
+    'equipped',
+])]
 class HeroEquipment extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'hero_id',
-        'equipment_item_id',
-        'equipped',
-    ];
-
     /**
      * @return array<string, string>
      */

@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -28,30 +29,26 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int $armor
  * @property int $life
  */
+#[Fillable([
+    'user_id',
+    'planet_id',
+    'name',
+    'avatar',
+    'archetype',
+    'level',
+    'xp',
+    'talent_points_spent',
+    'status',
+    'strength',
+    'intelligence',
+    'willpower',
+    'dexterity',
+    'attack_power',
+    'armor',
+    'life',
+])]
 class Hero extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'user_id',
-        'planet_id',
-        'name',
-        'avatar',
-        'archetype',
-        'level',
-        'xp',
-        'talent_points_spent',
-        'status',
-        'strength',
-        'intelligence',
-        'willpower',
-        'dexterity',
-        'attack_power',
-        'armor',
-        'life',
-    ];
-
     /**
      * The user (player) that recruited this hero.
      *
