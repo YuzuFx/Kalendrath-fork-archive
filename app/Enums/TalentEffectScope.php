@@ -4,8 +4,8 @@ namespace OGame\Enums;
 
 /**
  * Who/what a talent node's effect applies to (GDD section 5.5).
- * A "royaume" talent targets the hero's governed city rather than the
- * hero itself, a support talent may target the hero's party/group, and the
+ * A "royaume" talent targets the whole kingdom (no governor per city since
+ * 2026-11-19), a support talent may target the hero's party/group, and the
  * main hero's "royaume" path (plus capped advisor bonuses) applies empire-wide
  * (revision of 2026-10-11).
  */

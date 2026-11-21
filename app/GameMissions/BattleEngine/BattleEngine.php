@@ -127,6 +127,37 @@ abstract class BattleEngine
     }
 
     /**
+     * Kalendrath: hero bonus percentages actually applied, army by army (only
+     * armies and unit types with a non-zero bonus), for the battle report
+     * snapshot (HeroBattleReport).
+     *
+     * @return list<array{side: string, fleet_mission_id: int, owner_id: int, garrison: bool, units: array<string, array{attack: float, shield: float, structural_integrity: float}>}>
+     */
+    public function heroModifiers(): array
+    {
+        $effects = app(HeroCombatEffects::class);
+        $armies = [];
+        $sides = [['attackers', $this->attackers], ['defenders', $this->defenders]];
+        foreach ($sides as [$side, $fleets]) {
+            foreach ($fleets as $fleet) {
+                $garrison = $side === 'defenders' && $fleet->fleetMissionId === 0;
+                $units = [];
+                foreach ($fleet->units->units as $unit) {
+                    $percents = $effects->percents($fleet->ownerId, $garrison, $unit->unitObject);
+                    if (array_sum($percents) > 0) {
+                        $units[$unit->unitObject->machine_name] = $percents;
+                    }
+                }
+                if ($units !== []) {
+                    $armies[] = ['side' => $side, 'fleet_mission_id' => $fleet->fleetMissionId, 'owner_id' => $fleet->ownerId, 'garrison' => $garrison, 'units' => $units];
+                }
+            }
+        }
+
+        return $armies;
+    }
+
+    /**
      * Battle values used by the engines, per side, army (fleet mission id)
      * and unit machine name. Read-only view for tests and future reports.
      *

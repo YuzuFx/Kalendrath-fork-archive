@@ -35,8 +35,8 @@ return [
      * Provisional values (classes to be validated by Gregory).
      */
     'archetypes' => [
-        'warrior' => ['equip_classes' => ['heavy', 'any']],
-        'sorcerer' => ['equip_classes' => ['arcane', 'any']],
+        'warrior' => ['equip_classes' => ['war', 'any']],
+        'sorcerer' => ['equip_classes' => ['wizard', 'any']],
     ],
 
     // Archetypes of the alpha: a kingdom without a main hero draws loot from
@@ -44,23 +44,15 @@ return [
     'alpha_archetypes' => ['warrior', 'sorcerer'],
 
     /*
-     * Ceiling of a hero's total bonus per effect axis (talents + equipment),
-     * from the "Cadre d'équilibrage des talents" table of the GDD (cap at 29
-     * points). An effect_type absent from this list is not capped.
+     * Optional ceiling of the total bonus (talents + equipment) on an effect
+     * axis, keyed by effect_type. EMPTY BY DEFAULT (decision of 2026-11-21):
+     * the hero is a central mechanic and its weight comes from the talent
+     * trees (budget of 29 points, GDD 5.5), not from a global ceiling. An
+     * effect_type absent from this list is not capped; add a line to cap one
+     * axis if the simulation shows a runaway. The advisors' ratio
+     * (advisors.axis_cap_ratio) only applies to an axis that has a ceiling.
      */
     'axis_caps' => [
-        'loot_bonus_percent' => 29,
-        'hero_stat_bonus_percent' => 29,
-        'unavailability_duration_reduction_percent' => 29,
-        'wounded_recovery_bonus_percent' => 25,
-        'fuel_consumption_reduction_percent' => 20,
-        'troop_combat_bonus_percent' => 15,
-        // Shield and hull of the governed city's garrison. Not in the GDD
-        // table: aligned on the troop axis by default (to be confirmed).
-        'garrison_defense_bonus_percent' => 15,
-        'mission_travel_time_reduction_percent' => 15,
-        'build_research_time_reduction_percent' => 15,
-        'production_bonus_percent' => 10,
-        'construction_cost_reduction_percent' => 8,
+        // 'production_bonus_percent' => 40,
     ],
 ];

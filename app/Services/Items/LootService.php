@@ -34,9 +34,20 @@ class LootService
 
     public function grant(LootContext $context): KingdomItem|null
     {
+        return $this->roll($context)['item'];
+    }
+
+    /**
+     * Same as grant(), and tells whether this call was a replay of an
+     * already recorded roll (the caller then sends no second message).
+     *
+     * @return array{item: KingdomItem|null, replay: bool}
+     */
+    public function roll(LootContext $context): array
+    {
         // NPC players (negative ids) and unknown beneficiaries never loot.
         if ($context->beneficiaryUserId <= 0) {
-            return null;
+            return ['item' => null, 'replay' => false];
         }
 
         $table = LootTable::fromConfig($context->lootTableCode);
@@ -53,7 +64,7 @@ class LootService
         // The idempotency key is reserved (operation row) before the roll, in
         // the caller's transaction (the mission's): a replay returns the
         // recorded result, "no item" included, and never rolls again.
-        [$operation] = $this->ledger->run(
+        [$operation, $replay] = $this->ledger->run(
             $context->idempotencyKey,
             ItemOperationType::LOOT_GRANT,
             $context->beneficiaryUserId,
@@ -85,7 +96,7 @@ class LootService
             $meta,
         );
 
-        return KingdomItem::where('created_operation_id', $operation->id)->first();
+        return ['item' => KingdomItem::where('created_operation_id', $operation->id)->first(), 'replay' => $replay];
     }
 
     /**

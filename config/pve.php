@@ -10,7 +10,7 @@
 | nor on the War Mode. A victorious raid rolls item loot per attacking army
 | (config/loot.php, table "loot_table").
 |
-| ALL VALUES ARE PROVISIONAL: garrison, resources and respawn delay are to be
+| ALL VALUES ARE PROVISIONAL: garrison, buildings and starting stock are to be
 | calibrated for a x5 server (see the lot 2 report). Displayed names are
 | [TBD] (resources/lang/{fr,en}/t_pve.php): never invent a bot name.
 */
@@ -43,11 +43,22 @@ return [
                 'heavy_fighter' => 5,
                 'rocket_launcher' => 10,
             ],
-            // Lootable stock at each restock: metal = Wood, crystal = Iron, deuterium = Mana.
-            'resources' => ['metal' => 20000, 'crystal' => 10000, 'deuterium' => 5000],
-            // Game hours before the garrison comes back after a battle,
-            // divided by the economy speed of the server (x5: 1 h 12 min).
-            'respawn_hours' => 6,
+            // A camp produces like a player (decision of 2026-11-21): these
+            // buildings give it its production (and its storage ceiling), the
+            // upstream formulas do the rest, including the economy speed.
+            // PROVISIONAL levels, to calibrate with the simulator.
+            'buildings' => [
+                'metal_mine' => 10,
+                'crystal_mine' => 8,
+                'deuterium_synthesizer' => 6,
+                'solar_plant' => 12,
+                'metal_store' => 3,
+                'crystal_store' => 3,
+                'deuterium_store' => 2,
+            ],
+            // Stock at creation (metal = Wood, crystal = Iron, deuterium = Mana).
+            // After that the camp only has what it produces and what it keeps.
+            'start_resources' => ['metal' => 20000, 'crystal' => 10000, 'deuterium' => 5000],
         ],
     ],
 ];

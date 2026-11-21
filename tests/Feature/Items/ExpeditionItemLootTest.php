@@ -100,7 +100,8 @@ class ExpeditionItemLootTest extends FleetDispatchTestCase
         $worn = resolve(HeroEquipmentService::class)->equip($hero, $item);
         $this->assertSame(KingdomItemState::EQUIPPED, $worn->state);
 
-        $this->assertMessageReceivedAndContains('fleets', 'expeditions', ['Expedition Result']);
+        // The message names the item won.
+        $this->assertMessageReceivedAndContains('fleets', 'expeditions', ['Expedition Result', e((string) __('t_items.item.' . $item->definition->code . '.name'))]);
     }
 
     public function testAReplayedResolutionNeverGrantsTheItemTwice(): void

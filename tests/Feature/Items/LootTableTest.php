@@ -74,7 +74,7 @@ class LootTableTest extends TestCase
     {
         foreach (LootTable::codes() as $code) {
             $table = LootTable::fromConfig($code);
-            foreach ([['heavy', 'any'], ['arcane', 'any'], ['heavy', 'arcane', 'any']] as $classes) {
+            foreach ([['war', 'any'], ['wizard', 'any'], ['war', 'wizard', 'any']] as $classes) {
                 foreach ([1, 3, 10] as $level) {
                     $probabilities = LootTable::probabilities($table->pool($this->definitions(), $classes, $level));
                     $this->assertNotEmpty($probabilities, $code);
@@ -90,14 +90,14 @@ class LootTableTest extends TestCase
         $codes = fn (array $pool): array => array_map(fn (array $entry) => $entry['definition']->code, $pool);
 
         // Warrior: heavy and any, never arcane.
-        $warrior = $codes($table->pool($this->definitions(), ['heavy', 'any'], 10));
+        $warrior = $codes($table->pool($this->definitions(), ['war', 'any'], 10));
         $this->assertContains('head_warden_helm', $warrior);
         $this->assertContains('ring_copper_band', $warrior);
         $this->assertNotContains('head_adept_hood', $warrior);
 
         // Level 1 with a margin of 0: no level 3 item.
         config(['loot.level_margin' => 0]);
-        $level1 = $codes(LootTable::fromConfig('expedition.t1')->pool($this->definitions(), ['heavy', 'any'], 1));
+        $level1 = $codes(LootTable::fromConfig('expedition.t1')->pool($this->definitions(), ['war', 'any'], 1));
         $this->assertNotContains('chest_warden_hauberk', $level1);
         $this->assertContains('head_warden_helm', $level1);
 
@@ -125,7 +125,7 @@ class LootTableTest extends TestCase
     public function testRollsFollowTheAttributionChanceAndTheWeights(): void
     {
         $table = LootTable::fromConfig('pve_camp.t1');
-        $pool = $table->pool($this->definitions(), ['heavy', 'any'], 10);
+        $pool = $table->pool($this->definitions(), ['war', 'any'], 10);
         $expected = LootTable::probabilities($pool);
         $random = new Randomizer(new Mt19937(42));
 

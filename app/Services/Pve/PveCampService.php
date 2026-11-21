@@ -23,7 +23,8 @@ use RuntimeException;
  * by the single PvE bot account: players spy on it and attack it with the
  * upstream missions and battle engines, nothing in the combat knows it is a
  * bot. Its garrison and lootable stock come from config/pve.php and come back
- * some time after a battle (respawn, divided by the economy speed). Camps
+ * the way a player's would: the planet has mines and produces resources, and
+ * the bot recruits its missing garrison with what it holds. Camps
  * depend neither on a war system nor on the War Mode.
  */
 class PveCampService
@@ -123,79 +124,127 @@ class PveCampService
             'loot_table_code' => (string) $type['loot_table'],
         ]);
 
-        $this->restock($camp);
+        $this->initialize($camp);
 
         return $camp->refresh();
     }
 
     /**
-     * After a battle against a camp: count a won raid and plan the return
-     * of the garrison (once, the first battle sets the timer).
+     * After a battle against a camp: count a won raid. The camp does not
+     * come back on a timer: it recruits again with what it produces.
      */
     public function recordBattle(PveCamp $camp, bool $raidWon): void
     {
         if ($raidWon) {
             $camp->raids_won++;
+            $camp->save();
         }
-        if ($camp->respawn_at === null) {
-            $hours = (float) $this->type($camp->camp_type)['respawn_hours'];
-            $seconds = (int) round($hours * 3600 / max(1, $this->settings->economySpeed()));
-            $camp->respawn_at = Date::now()->addSeconds($seconds);
-        }
-        $camp->save();
     }
 
     /**
-     * Restocks the camps whose respawn time has come (scheduled command).
+     * Lets every camp produce and recruit (scheduled command, every minute).
      *
-     * @return int Number of camps restocked.
+     * @return int Number of units recruited.
      */
-    public function respawnDue(): int
+    public function recruitDue(): int
     {
         $count = 0;
-        foreach (PveCamp::whereNotNull('respawn_at')->where('respawn_at', '<=', Date::now())->get() as $camp) {
-            $this->restock($camp);
-            $count++;
+        foreach (PveCamp::all() as $camp) {
+            $count += $this->recruit($camp);
         }
 
         return $count;
     }
 
     /**
-     * Sets the camp's garrison and lootable stock back to its type (absolute
-     * values, so a replay is harmless) and clears the respawn timer.
+     * Brings the camp's planet up to date (the upstream production of its
+     * mines, since the last update), then recruits the missing units of its
+     * garrison, in the order of the configuration, as far as its resources
+     * go. The cost is the ordinary unit price: a pillaged camp rebuilds
+     * slowly, a rich one quickly.
+     *
+     * @return int Number of units recruited.
      */
-    public function restock(PveCamp $camp): void
+    public function recruit(PveCamp $camp): int
+    {
+        $type = $this->type($camp->camp_type);
+        $recruited = 0;
+
+        DB::transaction(function () use ($camp, $type, &$recruited): void {
+            Planet::whereKey($camp->planet_id)->lockForUpdate()->firstOrFail();
+            $planet = $this->planets->make($camp->planet_id, true);
+            if ($planet === null) {
+                return;
+            }
+            $planet->update();
+
+            foreach ((array) $type['garrison'] as $machineName => $target) {
+                $missing = (int) $target - $planet->getObjectAmount((string) $machineName);
+                if ($missing <= 0) {
+                    continue;
+                }
+
+                $price = ObjectService::getObjectPrice((string) $machineName, $planet);
+                $have = $planet->getResources();
+                $affordable = $missing;
+                foreach (['metal', 'crystal', 'deuterium'] as $resource) {
+                    $unitCost = (int) $price->{$resource}->get();
+                    if ($unitCost > 0) {
+                        $affordable = min($affordable, intdiv((int) $have->{$resource}->get(), $unitCost));
+                    }
+                }
+                if ($affordable <= 0) {
+                    continue;
+                }
+
+                $cost = $price->multiply((float) $affordable);
+                if ($planet->deductResourcesAtomic($cost)) {
+                    $planet = $this->planets->make($camp->planet_id, true) ?? $planet;
+                    $planet->addUnit((string) $machineName, $affordable);
+                    $recruited += $affordable;
+                }
+            }
+        });
+
+        $this->planets->forgetPlanetCache($camp->planet_id);
+
+        return $recruited;
+    }
+
+    /**
+     * First setup of a camp: the buildings of its type, the starting stock and
+     * the full garrison. After this the camp lives on its own production.
+     */
+    private function initialize(PveCamp $camp): void
     {
         $type = $this->type($camp->camp_type);
 
         DB::transaction(function () use ($camp, $type): void {
             $planet = Planet::whereKey($camp->planet_id)->lockForUpdate()->firstOrFail();
 
-            // Every combat unit to zero, then the configured garrison.
-            foreach (ObjectService::getUnitObjects() as $unit) {
-                if (array_key_exists($unit->machine_name, $planet->getAttributes())) {
-                    $planet->{$unit->machine_name} = 0;
-                }
+            foreach ((array) $type['buildings'] as $machineName => $level) {
+                $planet->{$machineName} = (int) $level;
             }
             foreach ((array) $type['garrison'] as $machineName => $amount) {
                 $planet->{$machineName} = (int) $amount;
             }
-            foreach ((array) $type['resources'] as $resource => $amount) {
+            foreach ((array) $type['start_resources'] as $resource => $amount) {
                 $planet->{$resource} = (int) $amount;
             }
             $planet->time_last_update = (int) Date::now()->timestamp;
             $planet->save();
-
-            $camp->respawn_at = null;
-            $camp->save();
         });
+
+        // The production and storage columns are derived from the buildings.
+        $service = $this->planets->make($camp->planet_id, true);
+        $service?->updateResourceStorageStats();
+        $service?->updateResourceProductionStats();
 
         $this->planets->forgetPlanetCache($camp->planet_id);
     }
 
     /**
-     * @return array{tier: int, loot_table: string, garrison: array<string, int>, resources: array<string, int>, respawn_hours: int|float}
+     * @return array{tier: int, loot_table: string, garrison: array<string, int>, buildings: array<string, int>, start_resources: array<string, int>}
      */
     private function type(string $campType): array
     {
@@ -204,7 +253,7 @@ class PveCampService
             throw new RuntimeException('Unknown PvE camp type: ' . $campType);
         }
 
-        /** @var array{tier: int, loot_table: string, garrison: array<string, int>, resources: array<string, int>, respawn_hours: int|float} $type */
+        /** @var array{tier: int, loot_table: string, garrison: array<string, int>, buildings: array<string, int>, start_resources: array<string, int>} $type */
         return $type;
     }
 

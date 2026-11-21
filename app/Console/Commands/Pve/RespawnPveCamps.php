@@ -8,18 +8,17 @@ use Illuminate\Console\Command;
 use OGame\Services\Pve\PveCampService;
 
 /**
- * Brings back the garrison and lootable stock of the camps whose respawn time
- * has come (scheduled every minute in routes/console.php).
+ *  * has come (scheduled every minute in routes/console.php).
  */
-#[Description('Restock the PvE camps whose respawn time has come.')]
+#[Description('Let the PvE camps produce and recruit their missing garrison.')]
 #[Signature('kalendrath:pve:respawn')]
 class RespawnPveCamps extends Command
 {
     public function handle(PveCampService $camps): int
     {
-        $count = $camps->respawnDue();
+        $count = $camps->recruitDue();
         if ($count > 0) {
-            $this->info($count . ' PvE camp(s) restocked.');
+            $this->info($count . ' unit(s) recruited by the PvE camps.');
         }
 
         return Command::SUCCESS;

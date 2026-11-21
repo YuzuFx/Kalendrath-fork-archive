@@ -42,6 +42,7 @@ use OGame\GameMessages\MoonDestructionMissionFailed;
 use OGame\GameMessages\MoonDestructionRepelled;
 use OGame\GameMessages\MoonDestructionSuccess;
 use OGame\GameMessages\PlanetRelocationSuccess;
+use OGame\GameMessages\PveRaidItemFound;
 use OGame\GameMessages\ReturnOfFleet;
 use OGame\GameMessages\ReturnOfFleetWithResources;
 use OGame\GameMessages\TransportArrived;
@@ -91,6 +92,9 @@ class GameMessageFactory
         'expedition_gain_resources' => ExpeditionGainResources::class,
         'expedition_gain_ships' => ExpeditionGainShips::class,
         'expedition_merchant_found' => ExpeditionMerchantFound::class,
+
+        // Kalendrath: item won on a PvE camp
+        'pve_raid_item_found' => PveRaidItemFound::class,
 
         // Buddy system messages
         'buddy_request_received' => BuddyRequestReceived::class,

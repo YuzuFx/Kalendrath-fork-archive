@@ -134,7 +134,7 @@ class HeroEquipmentServiceTest extends HeroTestCase
     {
         $this->expectException(HeroRuleException::class);
 
-        $this->service()->equip($this->hero, $this->own('chest', 1, 'arcane'));
+        $this->service()->equip($this->hero, $this->own('chest', 1, 'wizard'));
     }
 
     public function testASorcererWearsArcaneButNotHeavyGear(): void
@@ -142,11 +142,11 @@ class HeroEquipmentServiceTest extends HeroTestCase
         $other = User::factory()->create();
         $sorcerer = resolve(HeroRosterService::class)->recruitMain($other, HeroArchetype::SORCERER, 'Mage');
 
-        $robe = $this->service()->equip($sorcerer, $this->own('chest', 1, 'arcane', $other->id));
+        $robe = $this->service()->equip($sorcerer, $this->own('chest', 1, 'wizard', $other->id));
         $this->assertSame(KingdomItemState::EQUIPPED, $robe->state);
 
         $this->expectException(HeroRuleException::class);
-        $this->service()->equip($sorcerer, $this->own('legs', 1, 'heavy', $other->id));
+        $this->service()->equip($sorcerer, $this->own('legs', 1, 'war', $other->id));
     }
 
     public function testADestroyedItemCannotBeEquipped(): void

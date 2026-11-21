@@ -49,7 +49,7 @@ return [
     // Common (1): armour 100, cloak 80, jewels 70. Uncommon (2): armour 30,
     // jewels and cloak 20. Every catalog code must appear here (tested).
     'item_weights' => [
-        // Warrior (heavy)
+        // Warrior (war)
         'head_warden_helm' => 100,
         'shoulders_warden_pauldrons' => 100,
         'chest_warden_hauberk' => 30,
@@ -58,7 +58,7 @@ return [
         'belt_warden_girdle' => 100,
         'legs_warden_greaves' => 30,
         'boots_warden_sabatons' => 100,
-        // Sorcerer (arcane)
+        // Sorcerer (wizard)
         'head_adept_hood' => 100,
         'shoulders_adept_mantle' => 100,
         'chest_adept_robe' => 30,

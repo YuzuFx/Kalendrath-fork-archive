@@ -360,4 +360,10 @@ REMARQUE : La force totale de tous les participants par rapport à la force tot
         'body' => 'Votre demande de réparation sur la planète :planet a été complétée.
 :ship_count les navires ont été remis en service.',
     ],
+    // Kalendrath : objet gagné sur un camp PvE.
+    'pve_raid_item_found' => [
+        'from' => 'Commandement des armées',
+        'subject' => 'Butin du camp :coordinates',
+        'body' => 'Votre armée a vaincu la garnison du camp. Parmi les dépouilles, elle a trouvé : :item. L\'objet vous attend dans l\'inventaire du royaume.',
+    ],
 ];

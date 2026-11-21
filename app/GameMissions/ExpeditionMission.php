@@ -684,16 +684,17 @@ class ExpeditionMission extends GameMission
         $player = $this->playerServiceFactory->make($mission->user_id, true);
 
         // Kalendrath: one item for the kingdom, in this transaction, idempotent per mission.
-        if (app(ExpeditionLootService::class)->grant($mission) === null) {
-            // Nothing could be granted (no drop, empty catalog) -> treat as Failed.
+        $item = app(ExpeditionLootService::class)->grant($mission);
+        if ($item === null) {
+            // Nothing could be granted (no drop, empty pool) -> treat as Failed.
             $this->processExpeditionFailedOutcome($mission);
 
             return;
         }
 
-        // Send a message to the player with the item found outcome.
+        // Send a message to the player with the item found outcome (Kalendrath: naming the item).
         $message_variation_id = ExpeditionGainItem::getRandomMessageVariationId();
-        $this->messageService->sendSystemMessageToPlayer($player, ExpeditionGainItem::class, ['message_variation_id' => $message_variation_id]);
+        $this->messageService->sendSystemMessageToPlayer($player, ExpeditionGainItem::class, ['message_variation_id' => $message_variation_id, 'item_code' => $item->definition->code]);
     }
 
     /**

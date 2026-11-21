@@ -21,11 +21,11 @@ return [
         'ring' => 'Anneau',
     ],
 
-    // Classes d'équipement : noms provisoires.
+    // Classes d'équipement : nommées d'après les archétypes (décidé le 2026-11-21).
     'equip_class' => [
-        'heavy' => 'Lourd (Guerrier)',
-        'arcane' => 'Arcanique (Sorcier)',
-        'any' => 'Tous',
+        'war' => 'Guerrier',
+        'wizard' => 'Sorcier',
+        'any' => 'Commun',
     ],
 
     'rarity' => [
@@ -61,6 +61,10 @@ return [
 
     'inventory' => [
         'places' => ':used / :capacity places',
+    ],
+
+    'message' => [
+        'item_found' => 'Objet obtenu : :item. Il vous attend dans l\'inventaire du royaume.',
     ],
 
     'error' => [

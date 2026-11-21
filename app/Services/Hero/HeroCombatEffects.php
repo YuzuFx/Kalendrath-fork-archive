@@ -21,7 +21,7 @@ use OGame\Services\PlayerService;
  *
  * Each bonus is additive on the base value of the property (like research
  * and the production bonus): floor(base x % / 100), on top of the upstream
- * value. Each axis is capped ONCE on its final total (config heroes.axis_caps).
+ * value. Each axis is capped ONCE on its final total, only if config heroes.axis_caps gives it a ceiling (none by default).
  * Without heroes the upstream values are returned unchanged.
  */
 class HeroCombatEffects

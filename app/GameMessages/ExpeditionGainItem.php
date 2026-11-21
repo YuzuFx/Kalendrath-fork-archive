@@ -23,4 +23,18 @@ class ExpeditionGainItem extends ExpeditionGameMessage
      * @var int
      */
     protected static int $numberOfVariations = 1;
+
+    /**
+     * Kalendrath: names the item won (param item_code, translated when read).
+     */
+    public function getBody(): string
+    {
+        $body = parent::getBody();
+        $code = $this->message->params['item_code'] ?? null;
+        if (is_string($code) && $code !== '') {
+            $body .= '<br><br>' . e(__('t_items.message.item_found', ['item' => __('t_items.item.' . $code . '.name')]));
+        }
+
+        return $body;
+    }
 }

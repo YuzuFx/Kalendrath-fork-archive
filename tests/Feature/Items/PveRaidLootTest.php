@@ -4,8 +4,10 @@ namespace Tests\Feature\Items;
 
 use Illuminate\Support\Facades\Date;
 use Illuminate\Testing\PendingCommand;
+use OGame\Enums\HeroArchetype;
 use OGame\Enums\ItemSourceType;
 use OGame\Enums\KingdomItemState;
+use OGame\Enums\TalentEffectScope;
 use OGame\GameMissions\BattleEngine\Models\AttackerFleetResult;
 use OGame\GameMissions\BattleEngine\Models\BattleResult;
 use OGame\GameObjects\Models\Units\UnitCollection;
@@ -13,13 +15,18 @@ use OGame\Models\BattleReport;
 use OGame\Models\Enums\PlanetType;
 use OGame\Models\FleetMission;
 use OGame\Models\Hero;
+use OGame\Models\HeroTalent;
 use OGame\Models\ItemOperation;
 use OGame\Models\KingdomItem;
+use OGame\Models\Message;
 use OGame\Models\Planet;
 use OGame\Models\Planet\Coordinate;
 use OGame\Models\PveCamp;
 use OGame\Models\Resources;
+use OGame\Models\TalentNode;
 use OGame\Models\User;
+use OGame\Services\Hero\HeroBattleReport;
+use OGame\Services\Hero\HeroRosterService;
 use OGame\Services\Items\ItemCatalogService;
 use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
@@ -121,8 +128,6 @@ class PveRaidLootTest extends FleetDispatchTestCase
         $this->assertSame(2, (int) $planet->light_fighter);
         $this->assertSame(1, (int) $planet->rocket_launcher);
         $this->assertSame('pve_camp.t1', $camp->loot_table_code);
-        $this->assertNull($camp->respawn_at);
-
         // A second camp reuses the same bot account.
         $other = resolve(PveCampService::class)->spawn('hostile_camp', $this->getNearbyEmptyCoordinate(13, 15));
         $this->assertSame($bot->id, Planet::findOrFail($other->planet_id)->user_id);
@@ -153,7 +158,37 @@ class PveRaidLootTest extends FleetDispatchTestCase
 
         $camp->refresh();
         $this->assertSame(1, $camp->raids_won);
-        $this->assertNotNull($camp->respawn_at);
+
+        // The raider gets one message naming the item (translated when read).
+        $messages = Message::where('user_id', $this->currentUserId)->where('key', 'pve_raid_item_found')->get();
+        $this->assertCount(1, $messages);
+        $this->assertSame($item->definition->code, $messages->firstOrFail()->params['item_code'] ?? null);
+        $this->assertMessageReceivedAndContains('fleets', 'combat_reports', [(string) __('t_items.item.' . $item->definition->code . '.name')]);
+    }
+
+    public function testTheBattleReportKeepsTheHeroModifiersOfEachArmy(): void
+    {
+        $this->basicSetup();
+        $hero = resolve(HeroRosterService::class)->recruitMain(User::findOrFail($this->currentUserId), HeroArchetype::WARRIOR, 'Raider');
+        $node = TalentNode::create([
+            'archetype' => 'warrior', 'branch' => 'test', 'name' => 'Test', 'tier' => 1, 'position' => 0,
+            'point_cost' => 1, 'max_rank' => 1,
+            'effect_type' => 'troop_combat_bonus_percent', 'effect_value' => 10, 'effect_scope' => TalentEffectScope::EMPIRE,
+        ]);
+        HeroTalent::create(['hero_id' => $hero->id, 'talent_node_id' => $node->id, 'rank' => 1]);
+        $this->spawnCamp();
+
+        $mission = $this->raid();
+        $this->assertNotNull($mission);
+        $this->resolveArrival($mission);
+
+        $report = BattleReport::where('planet_galaxy', $this->campCoordinate->galaxy)->where('planet_system', $this->campCoordinate->system)
+            ->where('planet_position', $this->campCoordinate->position)->latest('id')->firstOrFail();
+        $snapshot = $report->general[HeroBattleReport::KEY] ?? [];
+        $this->assertCount(1, $snapshot, 'Only the raider has a hero bonus (the bot has no hero).');
+        $this->assertSame('attackers', $snapshot[0]['side']);
+        $this->assertSame($this->currentUserId, $snapshot[0]['owner_id']);
+        $this->assertEquals(['attack' => 10, 'shield' => 10, 'structural_integrity' => 10], $snapshot[0]['units']['cruiser']);
     }
 
     public function testTheRaidWorksWithThePhpEngineToo(): void
@@ -185,7 +220,6 @@ class PveRaidLootTest extends FleetDispatchTestCase
         $this->assertSame(0, KingdomItem::where('owner_user_id', $this->currentUserId)->count());
         $camp->refresh();
         $this->assertSame(0, $camp->raids_won);
-        $this->assertNotNull($camp->respawn_at);
     }
 
     public function testAnEmptiedCampGivesNoItemUntilItsGarrisonIsBack(): void
@@ -303,26 +337,47 @@ class PveRaidLootTest extends FleetDispatchTestCase
         $this->assertSame(0, ItemOperation::where('idempotency_key', 'pve_raid:900002:loot')->count());
     }
 
-    public function testTheGarrisonAndStockComeBackAtTheRespawnTime(): void
+    public function testACampHasBuildingsAndProducesResourcesLikeAPlayer(): void
     {
         $this->basicSetup();
         $camp = $this->spawnCamp();
-        Planet::whereKey($camp->planet_id)->update(['light_fighter' => 0, 'rocket_launcher' => 0, 'metal' => 0]);
+        $planet = Planet::findOrFail($camp->planet_id);
+        $this->assertSame(10, (int) $planet->metal_mine);
+        $this->assertSame(20000, (int) $planet->metal);
+
+        $this->travel(2)->hours();
+        resolve(PveCampService::class)->recruit($camp);
+
+        $this->assertGreaterThan(20000, (int) Planet::findOrFail($camp->planet_id)->metal);
+    }
+
+    public function testAPillagedCampRebuildsItsGarrisonOnlyWithItsOwnResources(): void
+    {
+        $this->basicSetup();
+        $camp = $this->spawnCamp();
+        // Garrison destroyed and stock looted: nothing to recruit with.
+        Planet::whereKey($camp->planet_id)->update(['light_fighter' => 0, 'rocket_launcher' => 0, 'metal' => 0, 'crystal' => 0, 'deuterium' => 0, 'time_last_update' => Date::now()->timestamp]);
         resolve(PveCampService::class)->recordBattle($camp, true);
 
-        // 6 game hours at economy speed 5 = 72 minutes.
-        $this->assertEqualsWithDelta(Date::now()->addMinutes(72)->timestamp, $camp->refresh()->respawn_at?->timestamp, 2);
-
-        $this->travel(71)->minutes();
-        $this->respawnCommand()->assertSuccessful();
+        $this->assertSame(0, resolve(PveCampService::class)->recruit($camp));
         $this->assertSame(0, (int) Planet::findOrFail($camp->planet_id)->light_fighter);
 
-        $this->travel(2)->minutes();
+        // The mines produce; later the camp can pay for its units again.
+        $this->travel(6)->hours();
         $this->respawnCommand()->assertSuccessful();
         $planet = Planet::findOrFail($camp->planet_id);
-        $this->assertSame(2, (int) $planet->light_fighter);
-        $this->assertSame(1, (int) $planet->rocket_launcher);
-        $this->assertSame(20000, (int) $planet->metal);
-        $this->assertNull($camp->refresh()->respawn_at);
+        $this->assertGreaterThan(0, (int) $planet->light_fighter);
+        $this->assertLessThanOrEqual(2, (int) $planet->light_fighter);
+        $this->assertLessThanOrEqual(1, (int) $planet->rocket_launcher);
+    }
+
+    public function testACampNeverRecruitsBeyondItsGarrison(): void
+    {
+        $this->basicSetup();
+        $camp = $this->spawnCamp();
+
+        $this->travel(24)->hours();
+        $this->assertSame(0, resolve(PveCampService::class)->recruit($camp));
+        $this->assertSame(2, (int) Planet::findOrFail($camp->planet_id)->light_fighter);
     }
 }

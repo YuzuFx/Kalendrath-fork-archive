@@ -42,5 +42,5 @@ Schedule::command(CleanupDestroyedPlanets::class)->dailyAt('03:00')->withoutOver
 // Process Dark Matter regeneration every 5 minutes
 Schedule::command(DarkMatterRegenerateCommand::class)->everyFiveMinutes()->withoutOverlapping();
 
-// Kalendrath: PvE camps get their garrison back once their respawn time has come
+// Kalendrath: PvE camps produce like players and recruit the garrison they lack
 Schedule::command(RespawnPveCamps::class)->everyMinute()->withoutOverlapping();

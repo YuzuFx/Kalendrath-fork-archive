@@ -241,6 +241,7 @@ class HeroCombatEffectsTest extends IsolatedAccountTestCase
 
     public function testCapsApplyOnceOnTheFinalTotalOfTalentsAndItems(): void
     {
+        config(['heroes.axis_caps.troop_combat_bonus_percent' => 15, 'heroes.axis_caps.garrison_defense_bonus_percent' => 15]);
         // 14 (talent) + 1.5 (chest_warden_hauberk) + 1 (helm) = 16.5, capped at 15.
         $this->talent($this->attackerHero, 'troop_combat_bonus_percent', 14, TalentEffectScope::EMPIRE);
         $this->wearCatalogItem($this->attackerHero, 'head_warden_helm');

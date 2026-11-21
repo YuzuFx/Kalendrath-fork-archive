@@ -20,6 +20,7 @@ use OGame\Models\Planet\Coordinate;
 use OGame\Models\Resources;
 use OGame\Services\CharacterClassService;
 use OGame\Services\DebrisFieldService;
+use OGame\Services\Hero\HeroBattleReport;
 use OGame\Services\Items\PveLaunchGuard;
 use OGame\Services\ObjectService;
 use OGame\Services\PlanetService;
@@ -495,7 +496,9 @@ class AttackMission extends GameMission
             $this->messageService->sendBattleReportMessageToPlayer($defenderPlayer, $reportId);
         }
 
-        // Kalendrath: item loot of a victorious raid on a PvE camp, one roll per attacking army.
+        // Kalendrath: hero modifiers snapshot in the report, then item loot of a
+        // victorious raid on a PvE camp (one roll per attacking army).
+        app(HeroBattleReport::class)->record($reportId, $battleEngine);
         app(PveRaidLootService::class)->afterBattle($defenderPlanet->getPlanetId(), $battleResult, $reportId);
 
         // Send Reaper auto-collection message to attacker if debris was collected

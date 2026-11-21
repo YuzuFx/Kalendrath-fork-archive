@@ -26,7 +26,7 @@ class HeroEffectsResolver
     }
 
     /**
-     * Final bonus of a kingdom on one axis and target, capped on the total.
+     * Final bonus of a kingdom on one axis and target, capped on the total when the axis has a ceiling.
      * Zero without a query for a non-player (id <= 0: NPCs, unit tests).
      */
     public function forKingdom(int $userId, string $effectType, string $target = HeroEffectsService::ANY_TARGET): float

@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use OGame\Enums\HeroRole;
 
 /**
- * Pilot model for the hero/governor system (GDD section 5.5).
+ * Pilot model for the hero system (GDD section 5.5).
  * Minimal and non-functional: no recruitment, mission, or bonus logic yet.
  *
  * @property int $id

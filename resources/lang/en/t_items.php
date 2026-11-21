@@ -21,11 +21,11 @@ return [
         'ring' => 'Ring',
     ],
 
-    // Equipment classes: provisional names.
+    // Equipment classes: named after the archetypes (decided 2026-11-21).
     'equip_class' => [
-        'heavy' => 'Heavy (Warrior)',
-        'arcane' => 'Arcane (Sorcerer)',
-        'any' => 'Any',
+        'war' => 'Warrior',
+        'wizard' => 'Wizard',
+        'any' => 'Common',
     ],
 
     'rarity' => [
@@ -61,6 +61,10 @@ return [
 
     'inventory' => [
         'places' => ':used / :capacity places',
+    ],
+
+    'message' => [
+        'item_found' => 'Item obtained: :item. It awaits you in the kingdom\'s inventory.',
     ],
 
     'error' => [

@@ -195,6 +195,7 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
 
     public function testTheCapAppliesToTheFinalTotalOfTalentsAndItems(): void
     {
+        config(['heroes.axis_caps.production_bonus_percent' => 10]);
         HeroTalent::create(['hero_id' => $this->hero->id, 'talent_node_id' => $this->talent('production_bonus_percent', 8, TalentEffectScope::CITY)->id, 'rank' => 1]);
         $before = $this->stored(1);
 
@@ -208,6 +209,7 @@ class HeroProductionEffectsTest extends IsolatedAccountTestCase
 
     public function testAdvisorsAddAtMostTheirRatioOfTheCap(): void
     {
+        config(['heroes.axis_caps.production_bonus_percent' => 10]);
         $advisor = resolve(HeroRosterService::class)->recruitAdvisor(User::findOrFail($this->currentUserId), HeroArchetype::STEWARD, 'Steward');
         $advisor->level = 5;
         $advisor->save();

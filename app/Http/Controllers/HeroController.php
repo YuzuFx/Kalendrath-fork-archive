@@ -11,7 +11,7 @@ use OGame\Models\TalentNode;
 use OGame\Services\HeroLevelingService;
 
 /**
- * Pilot controller for the hero/governor system (GDD section 5.5).
+ * Pilot controller for the hero system (GDD section 5.5).
  * Minimal and non-functional: lists the current player's heroes and shows
  * a hero sheet (talents, equipment). No recruitment, mission, or bonus
  * logic yet.

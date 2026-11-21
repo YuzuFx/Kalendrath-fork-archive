@@ -5,7 +5,7 @@ namespace OGame\Services;
 /**
  * Computes hero level-up XP thresholds and talent point gains.
  *
- * Pilot design for the hero/governor system (GDD section 5.5). The XP
+ * Pilot design for the hero system (GDD section 5.5). The XP
  * threshold per level follows a power-law curve: xp_required(level) =
  * BASE_XP * level^exponent(level).
  *

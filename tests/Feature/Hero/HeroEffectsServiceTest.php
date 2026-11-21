@@ -78,8 +78,23 @@ class HeroEffectsServiceTest extends HeroTestCase
         $this->assertEqualsWithDelta(7.0, $effects['hero']['loot_bonus_percent'], 0.001);
     }
 
+    public function testNoAxisIsCappedByDefault(): void
+    {
+        // Decision of 2026-11-21: the talent trees set the weight of the hero,
+        // not a global ceiling.
+        $this->assertSame([], config('heroes.axis_caps'));
+
+        $this->invest($this->hero, 'production_bonus_percent', 6, TalentEffectScope::CITY);
+        $this->wear($this->hero, 'head', 'production_bonus_percent', 9, TalentEffectScope::CITY);
+
+        $effects = resolve(HeroEffectsService::class)->forHero($this->hero);
+
+        $this->assertEqualsWithDelta(15.0, $effects['city']['production_bonus_percent'], 0.001);
+    }
+
     public function testAxisCeilingIsApplied(): void
     {
+        config(['heroes.axis_caps.production_bonus_percent' => 10]);
         $this->invest($this->hero, 'production_bonus_percent', 6, TalentEffectScope::CITY);
         $this->wear($this->hero, 'head', 'production_bonus_percent', 9, TalentEffectScope::CITY);
 
@@ -127,6 +142,7 @@ class HeroEffectsServiceTest extends HeroTestCase
 
     public function testAdvisorsSumIsCappedAtAFractionOfTheAxisCeiling(): void
     {
+        config(['heroes.axis_caps.production_bonus_percent' => 10]);
         $roster = resolve(HeroRosterService::class);
         for ($i = 0; $i < 4; $i++) {
             $advisor = $roster->recruitAdvisor($this->user, HeroArchetype::STEWARD, 'Steward ' . $i);
@@ -160,6 +176,7 @@ class HeroEffectsServiceTest extends HeroTestCase
 
     public function testTheCapAppliesOnceOnTheFinalTotalAcrossScopes(): void
     {
+        config(['heroes.axis_caps.production_bonus_percent' => 10]);
         // 8 city + 8 empire would be 16 if each scope were capped separately.
         $this->invest($this->hero, 'production_bonus_percent', 8, TalentEffectScope::EMPIRE);
         $this->wear($this->hero, 'head', 'production_bonus_percent', 8, TalentEffectScope::CITY);

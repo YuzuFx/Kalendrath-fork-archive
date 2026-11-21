@@ -44,7 +44,7 @@ class LootServiceTest extends HeroTestCase
         $this->assertNotNull($item);
         $this->assertSame($this->user->id, $item->owner_user_id);
         $this->assertSame(ItemSourceType::EXPEDITION, $item->source_type);
-        $this->assertContains($item->definition->equip_class->value, ['heavy', 'any']);
+        $this->assertContains($item->definition->equip_class->value, ['war', 'any']);
 
         $worn = resolve(HeroEquipmentService::class)->equip($this->hero, $item);
         $this->assertSame($this->hero->id, $worn->holder_hero_id);
@@ -57,7 +57,7 @@ class LootServiceTest extends HeroTestCase
         for ($seed = 1; $seed <= 15; $seed++) {
             $item = resolve(LootService::class)->grant($this->context('test:loot:' . $seed, $seed));
             $this->assertNotNull($item);
-            $this->assertContains($item->definition->equip_class->value, ['arcane', 'any']);
+            $this->assertContains($item->definition->equip_class->value, ['wizard', 'any']);
         }
     }
 
@@ -158,7 +158,7 @@ class LootServiceTest extends HeroTestCase
         $item = resolve(LootService::class)->grant($this->context());
 
         $this->assertNotNull($item);
-        $this->assertContains($item->definition->equip_class->value, ['heavy', 'arcane', 'any']);
+        $this->assertContains($item->definition->equip_class->value, ['war', 'wizard', 'any']);
     }
 
     public function testNpcsNeverLoot(): void

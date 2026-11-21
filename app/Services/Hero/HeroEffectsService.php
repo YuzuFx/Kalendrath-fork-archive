@@ -11,7 +11,7 @@ use OGame\Models\User;
 
 /**
  * Aggregates the mechanical effects of heroes (invested talents + worn
- * equipment) and applies the per-axis ceilings of the GDD balance table.
+ * equipment) and applies the optional per-axis ceilings (config heroes.axis_caps, none by default).
  *
  * Equipment effects are read live from the item definitions (a rebalance of
  * one definition applies to every copy, decision of 2026-11-19). An effect

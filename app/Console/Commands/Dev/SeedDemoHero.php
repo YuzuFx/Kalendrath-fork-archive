@@ -250,7 +250,7 @@ class SeedDemoHero extends Command
      * Shape: 1 root -> splits into 2 -> splits into 3 -> merges into 2
      * (one exclusive-choice pair) -> merges into 1. Doubles as the
      * archetype's "royaume" branch: most nodes here are CITY-scoped
-     * (boost the colony the hero governs) rather than HERO-scoped.
+     * (boost the whole kingdom) rather than HERO-scoped.
      *
      * @return array<string, TalentNode>
      */
@@ -296,7 +296,7 @@ class SeedDemoHero extends Command
         ]);
         $t3Right = TalentNode::create([
             'archetype' => self::ARCHETYPE, 'branch' => $label, 'name' => 'Œil du Gardien',
-            'description' => 'Renforce la garnison de la ville gouvernée.',
+            'description' => 'Renforce la garnison des cités du royaume.',
             'effect_type' => 'garrison_defense_bonus_percent', 'effect_value' => 8, 'effect_scope' => $city,
             'tier' => 3, 'position' => 1, 'point_cost' => 2, 'max_rank' => 1,
         ]);
@@ -312,7 +312,7 @@ class SeedDemoHero extends Command
         $choiceGroup = 'serment_t4_choice';
         $t4Left = TalentNode::create([
             'archetype' => self::ARCHETYPE, 'branch' => $label, 'name' => 'Chaîne du Serment',
-            'description' => 'Accélère le recrutement de troupes martiales dans la ville gouvernée.',
+            'description' => 'Accélère le recrutement de troupes martiales dans les cités du royaume.',
             'effect_type' => 'troop_recruitment_speed_bonus_percent', 'effect_value' => 12, 'effect_scope' => $city,
             'tier' => 4, 'position' => -1, 'point_cost' => 3, 'max_rank' => 1, 'choice_group' => $choiceGroup,
         ]);
@@ -327,7 +327,7 @@ class SeedDemoHero extends Command
 
         $t5 = TalentNode::create([
             'archetype' => self::ARCHETYPE, 'branch' => $label, 'name' => 'Serment Inébranlable',
-            'description' => 'Renforce durablement la garnison de la ville gouvernée.',
+            'description' => 'Renforce durablement la garnison des cités du royaume.',
             'effect_type' => 'garrison_defense_bonus_percent', 'effect_value' => 20, 'effect_scope' => $city,
             'tier' => 5, 'position' => 0, 'point_cost' => 3, 'max_rank' => 1,
         ]);

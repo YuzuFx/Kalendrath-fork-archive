@@ -488,4 +488,10 @@ NOTE: The total strength of all participants compared to the total strength of d
         'body' => 'Your repair request on planet :planet has been completed.
 :ship_count ships have been put back into service.',
     ],
+    // Kalendrath: item won on a PvE camp.
+    'pve_raid_item_found' => [
+        'from' => 'Army Command',
+        'subject' => 'Spoils of the camp :coordinates',
+        'body' => 'Your army has defeated the camp\'s garrison. Among the spoils, it found: :item. The item awaits you in the kingdom\'s inventory.',
+    ],
 ];
