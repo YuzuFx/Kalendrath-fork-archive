@@ -18,3 +18,9 @@ vendor
 # Editor / IDE
 .idea
 .vscode
+
+# Secrets et configuration locale : ne jamais copier dans l image (exemples conserves)
+.env
+.env.*
+!.env.example
+!.env.example-prod

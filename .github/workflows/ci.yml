@@ -1,0 +1,126 @@
+name: CI
+
+# Point d'entrée unique de la CI. Les contrôles sont des workflows réutilisables
+# (run-*.yml) appelés ici, ce qui permet de sauter ceux qui ne concernent pas le
+# changement SANS laisser de contrôle « en attente » : le job final `ci-ok` tourne
+# toujours et c'est lui, et lui seul, qu'on rend obligatoire pour fusionner dans main.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    name: Détection des chemins modifiés
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.detect.outputs.backend }}
+      prod_build: ${{ steps.detect.outputs.prod_build }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Détecter les fichiers modifiés
+        id: detect
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # Hors pull request (push sur main, lancement manuel) : on exécute tout.
+          if [ "$EVENT_NAME" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+            echo "prod_build=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          git diff --name-only "$BASE_SHA...$HEAD_SHA" > changed.txt
+          echo "Fichiers modifiés :"
+          cat changed.txt
+
+          # Logique inversée par prudence : le back est testé sauf si TOUS les fichiers
+          # modifiés sont de la documentation, des outils ou des fichiers d'agents.
+          if grep -v -E '^(docs/|site-prototype/|tools/|\.claude/|\.agents/|\.codex/)|\.md$' changed.txt | grep -q .; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "backend=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          # Le build de production ne dépend que de l'image, de composer et du code.
+          if grep -q -E '^(Dockerfile|docker/|docker-compose|\.env\.example-prod|composer\.|app/|config/|nginx/|php/|mysql/|\.github/)' changed.txt; then
+            echo "prod_build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prod_build=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  rector:
+    name: Rector
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/run-rector-code-analysis.yml
+    permissions:
+      contents: read
+
+  pint:
+    name: Pint
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/run-laravel-pint-code-style-checker.yml
+    permissions:
+      contents: read
+
+  phpstan:
+    name: PHPStan
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/run-phpstan-code-analysis.yml
+    permissions:
+      contents: read
+
+  tests:
+    name: Tests
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/run-tests-docker-compose.yml
+    permissions:
+      contents: read
+
+  prod-build:
+    name: Build de production
+    needs: changes
+    if: needs.changes.outputs.prod_build == 'true'
+    uses: ./.github/workflows/run-docker-compose-prod.yml
+    permissions:
+      contents: read
+
+  ci-ok:
+    name: ci-ok
+    if: always()
+    needs: [changes, rector, pint, phpstan, tests, prod-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Vérifier le résultat des contrôles
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          # « skipped » est accepté (contrôle sans objet pour ce changement) ;
+          # « failure » et « cancelled » font échouer la synthèse.
+          if echo "$RESULTS" | jq -e 'to_entries | map(.value.result) | any(. != "success" and . != "skipped")' > /dev/null; then
+            echo "Au moins un contrôle obligatoire a échoué ou a été annulé."
+            exit 1
+          fi
+          echo "Tous les contrôles obligatoires sont verts (ou sans objet)."
