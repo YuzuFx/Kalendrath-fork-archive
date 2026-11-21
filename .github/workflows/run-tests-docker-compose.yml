@@ -1,32 +1,11 @@
 name: Docker Compose Unit Tests
 
 on:
-  push:
-    branches: [ "main" ]
-    paths-ignore:
-      - 'resources/css/**'
-      - 'resources/js/**'
-      - 'public/css/**'
-      - 'public/js/**'
-      - 'public/build/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.js'
-  pull_request:
-    branches: [ "main" ]
-    paths-ignore:
-      - 'resources/css/**'
-      - 'resources/js/**'
-      - 'public/css/**'
-      - 'public/js/**'
-      - 'public/build/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'vite.config.js'
+  workflow_call:
+  workflow_dispatch:
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+permissions:
+  contents: read
 
 jobs:
   test-docker:

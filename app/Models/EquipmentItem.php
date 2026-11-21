@@ -2,6 +2,7 @@
 
 namespace OGame\Models;
 
+use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use OGame\Enums\EquipmentRarity;
@@ -22,22 +23,18 @@ use OGame\Enums\TalentEffectScope;
  * @property float|null $effect_value
  * @property TalentEffectScope|null $effect_scope
  */
+#[Fillable([
+    'name',
+    'slot',
+    'rarity',
+    'description',
+    'effect_type',
+    'effect_value',
+    'effect_scope',
+    'required_level',
+])]
 class EquipmentItem extends Model
 {
-    /**
-     * @var list<string>
-     */
-    protected $fillable = [
-        'name',
-        'slot',
-        'rarity',
-        'description',
-        'effect_type',
-        'effect_value',
-        'effect_scope',
-        'required_level',
-    ];
-
     /**
      * @return array<string, string>
      */
