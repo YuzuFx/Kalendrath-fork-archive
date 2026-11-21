@@ -701,7 +701,7 @@ class SettingsService
     public function expeditionWeightItems(): float
     {
         // Kalendrath: provisional default 5 (was 0, outcome unreachable upstream).
-        return (float)$this->get('expedition_weight_items', '5');
+        return (float)$this->get('expedition_weight_items', '25');
     }
 
     /**

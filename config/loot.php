@@ -32,17 +32,16 @@
 |
 | Expedition: the outcome "item" is first drawn among the expedition
 | outcomes with the setting expedition_weight_items (single authority on the
-| expedition frequency); its table keeps drop_chance = 1.0.
+| expedition frequency, default weight 25); its table keeps drop_chance = 1.0.
 |
-| ALL VALUES ARE PROVISIONAL (2026-11-19): to be decided by Gregory with
+| ALL VALUES ARE PROVISIONAL (2026-11-21): to be decided by Gregory with
 | `php artisan kalendrath:loot:simulate` before the alpha.
 */
 return [
-    'version' => 2,
+    'version' => 3,
 
     // Items may drop up to this many levels above the main hero's level.
-    // 0 = every item is wearable at once. OPEN QUESTION for Gregory (kept at
-    // 2, the lot 1 behaviour). A table may override it ("level_margin").
+    // 0 = every item is wearable at once. A table may override it ("level_margin").
     'level_margin' => (int) env('LOOT_LEVEL_MARGIN', 2),
 
     // Base weight of every catalog item (database/catalog/items.php).
@@ -75,6 +74,31 @@ return [
         'ring_copper_band' => 70,
         'ring_mana_signet' => 70,
         'ring_iron_seal' => 20,
+        // Progression equipment
+        'chest_quilted_coat' => 100,
+        'legs_road_trousers' => 100,
+        'head_rune_circlet' => 30,
+        'neck_rune_pendant' => 13,
+        'shoulders_gate_pauldrons' => 13,
+        'shoulders_ward_mantle' => 13,
+        'cloak_elfweave' => 13,
+        'chest_kaelhelm_mail' => 3.5,
+        'chest_kaelhelm_vestment' => 3.5,
+        'wrists_dwarven_cuffs' => 30,
+        'hands_watch_gloves' => 30,
+        'belt_woodward_belt' => 13,
+        'legs_rampart_greaves' => 13,
+        'boots_ruin_boots' => 30,
+        'ring_amber_loop' => 13,
+        'head_rupture_helm' => 4,
+        'head_rupture_veil' => 4,
+        'cloak_threshold_cloak' => 4,
+        'wrists_obelisk_bracers' => 13,
+        'hands_oath_gauntlets' => 4,
+        'hands_straumar_gloves' => 4,
+        'boots_deep_road_boots' => 13,
+        'ring_seam_ring' => 4,
+        'neck_straumar_torc' => 3.5,
     ],
 
     'tables' => [
@@ -84,7 +108,7 @@ return [
             'drop_chance' => 1.0,
             'level_margin' => null,
             'slot_types' => null,
-            'rarity_multipliers' => [],
+            'rarity_multipliers' => [4 => 0.7, 5 => 0.6],
             'weights' => [],
         ],
 
@@ -96,7 +120,7 @@ return [
             'drop_chance' => 0.25,
             'level_margin' => null,
             'slot_types' => null,
-            'rarity_multipliers' => [2 => 1.5],
+            'rarity_multipliers' => [2 => 1.5, 3 => 1.3, 4 => 1.1, 5 => 1.0],
             'weights' => [],
         ],
 
@@ -106,8 +130,8 @@ return [
             'source' => 'pve_camp',
             'drop_chance' => 0.35,
             'level_margin' => null,
-            'slot_types' => null,
-            'rarity_multipliers' => [1 => 0.8, 2 => 1.8],
+            'slot_types' => ['head', 'shoulders', 'cloak', 'chest', 'wrists', 'hands', 'belt', 'legs', 'boots'],
+            'rarity_multipliers' => [1 => 0.8, 2 => 1.8, 3 => 2.1, 4 => 1.2, 5 => 1.8],
             'weights' => [],
         ],
     ],
@@ -115,8 +139,8 @@ return [
     // Assumptions of `kalendrath:loot:simulate` on a x5 server (real time):
     // source events per real hour for an active player. Expedition: 2 slots,
     // about 1 h 40 per expedition (1 h of exploration + travel at x5).
-    // Camp: one victory every 2 h (respawn 72 min at x5 + travel + other
-    // players). Override them with --per-hour.
+    // Camp: one victory every 2 h, an assumed pace including travel,
+    // available targets and competition. Override them with --per-hour.
     'simulation' => [
         'events_per_hour' => [
             'expedition' => 1.2,

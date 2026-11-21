@@ -75,7 +75,7 @@ class LootTableTest extends TestCase
         foreach (LootTable::codes() as $code) {
             $table = LootTable::fromConfig($code);
             foreach ([['war', 'any'], ['wizard', 'any'], ['war', 'wizard', 'any']] as $classes) {
-                foreach ([1, 3, 10] as $level) {
+                foreach (range(1, 30) as $level) {
                     $probabilities = LootTable::probabilities($table->pool($this->definitions(), $classes, $level));
                     $this->assertNotEmpty($probabilities, $code);
                     $this->assertEqualsWithDelta(1.0, array_sum($probabilities), 1e-9, $code);
@@ -103,7 +103,7 @@ class LootTableTest extends TestCase
 
         // Slot types and a zero weight remove items from a table.
         $rings = new LootTable('test', 'expedition', 1.0, 2, ['ring'], [], ['ring_iron_seal' => 0], (array) config('loot.item_weights'), 1);
-        $this->assertSame(['ring_copper_band', 'ring_mana_signet'], $codes($rings->pool($this->definitions(), ['any'], 10)));
+        $this->assertSame(['ring_copper_band', 'ring_mana_signet', 'ring_amber_loop'], $codes($rings->pool($this->definitions(), ['any'], 10)));
     }
 
     public function testARarerItemIsNeverMoreLikelyThanACommonOneOfTheSameSlot(): void
@@ -152,6 +152,45 @@ class LootTableTest extends TestCase
         $this->assertSame(LootTable::RESULT_EMPTY_POOL, $table->roll([], 4.0, $random)['result']);
     }
 
+    public function testLateGameRaritiesAreRareAndCampsImproveTheOdds(): void
+    {
+        foreach ([['war', 'any'], ['wizard', 'any']] as $classes) {
+            $previousEpicShare = 0.0;
+            $previousLegendaryShare = 0.0;
+            foreach (LootTable::codes() as $code) {
+                $table = LootTable::fromConfig($code);
+                $pool = $table->pool($this->definitions(), $classes, 30);
+                $probabilities = LootTable::probabilities($pool);
+                $expected = [];
+                foreach ($pool as $entry) {
+                    $definition = $entry['definition'];
+                    $rarity = $definition->rarity;
+                    $expected[$rarity] = ($expected[$rarity] ?? 0.0) + $probabilities[$definition->code];
+                }
+
+                $random = new Randomizer(new Mt19937(20261121));
+                $counts = array_fill(1, 5, 0);
+                for ($i = 0; $i < 100000; $i++) {
+                    $definition = $table->roll($pool, 1.0, $random)['definition'];
+                    if ($definition !== null) {
+                        $counts[$definition->rarity]++;
+                    }
+                }
+                $granted = array_sum($counts);
+                foreach ($counts as $rarity => $count) {
+                    $this->assertGreaterThan(0, $count, $code);
+                    $this->assertEqualsWithDelta($expected[$rarity], $count / $granted, 0.006, $code);
+                }
+                $this->assertLessThan(0.05, $expected[4], $code);
+                $this->assertLessThan(0.01, $expected[5], $code);
+                $this->assertGreaterThan($previousEpicShare, $expected[4], $code);
+                $this->assertGreaterThan($previousLegendaryShare, $expected[5], $code);
+                $previousEpicShare = $expected[4];
+                $previousLegendaryShare = $expected[5];
+            }
+        }
+    }
+
     public function testTheRevisionChangesWithTheTableContent(): void
     {
         $before = LootTable::fromConfig('expedition.t1')->revision();
@@ -180,6 +219,7 @@ class LootTableTest extends TestCase
         $camp->expectsOutputToContain('Table pve_camp.t1')
             ->expectsOutputToContain('head_adept_hood')
             ->expectsOutputToContain('items per real hour')
+            ->expectsOutputToContain('First immediately wearable item')
             ->assertSuccessful()
             ->run();
 

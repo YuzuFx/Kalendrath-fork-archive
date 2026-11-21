@@ -25,7 +25,7 @@ class PveRaidItemFound extends GameMessage
     protected function checkParams(array $params): array
     {
         $params = parent::checkParams($params);
-        $params['item'] = (string) __('t_items.item.' . $params['item_code'] . '.name');
+        $params['item_code'] = (string) __('t_items.item.' . $params['item_code'] . '.name');
 
         return $params;
     }

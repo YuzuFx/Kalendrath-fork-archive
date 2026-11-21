@@ -72,12 +72,14 @@ class ItemCatalogTest extends HeroTestCase
         $this->assertSame(1, $operation->meta['from_version'] ?? null);
     }
 
-    public function testEveryCatalogItemHasFrenchAndEnglishNames(): void
+    public function testEveryCatalogItemHasFrenchAndEnglishText(): void
     {
         foreach (array_keys($this->catalog()->catalog()) as $code) {
             foreach (['fr', 'en'] as $locale) {
-                $key = 't_items.item.' . $code . '.name';
-                $this->assertTrue(trans()->has($key, $locale), "Missing {$locale} name for {$code}");
+                foreach (['name', 'description'] as $field) {
+                    $key = 't_items.item.' . $code . '.' . $field;
+                    $this->assertTrue(trans()->hasForLocale($key, $locale), "Missing {$locale} {$field} for {$code}");
+                }
             }
         }
     }
@@ -87,16 +89,22 @@ class ItemCatalogTest extends HeroTestCase
         $this->catalog()->sync();
         $equipment = resolve(HeroEquipmentService::class);
 
-        foreach (['warrior', 'sorcerer'] as $archetype) {
+        $wearableCodes = [];
+        foreach ((array) config('heroes.alpha_archetypes') as $archetype) {
             $positions = [];
             $definitions = ItemDefinition::whereIn('equip_class', $equipment->allowedClasses($archetype))->whereNull('retired_at')->get();
             foreach ($definitions as $definition) {
+                $wearableCodes[] = $definition->code;
+                if ($definition->required_level !== 1) {
+                    continue;
+                }
                 foreach ($definition->slot_type?->positions() ?? [] as $slot) {
                     $positions[$slot->value] = true;
                 }
             }
             $this->assertCount(count(EquipmentSlot::cases()), $positions, "Archetype {$archetype} cannot fill every position");
         }
+        $this->assertEqualsCanonicalizing(array_keys($this->catalog()->catalog()), array_values(array_unique($wearableCodes)));
     }
 
     public function testEffectsAreReadable(): void

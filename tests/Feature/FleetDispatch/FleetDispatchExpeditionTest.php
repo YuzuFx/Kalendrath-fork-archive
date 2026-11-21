@@ -1110,7 +1110,7 @@ class FleetDispatchExpeditionTest extends FleetDispatchTestCase
             ExpeditionOutcomeType::Failed->value => 'expedition_weight_nothing',
             ExpeditionOutcomeType::LossOfFleet->value => 'expedition_weight_black_hole',
             ExpeditionOutcomeType::GainMerchantTrade->value => 'expedition_weight_merchant',
-            ExpeditionOutcomeType::GainItems->value => 'expedition_weight_merchant', // Items use merchant weight for now
+            ExpeditionOutcomeType::GainItems->value => 'expedition_weight_items',
             ExpeditionOutcomeType::BattlePirates->value => 'expedition_weight_pirates',
             ExpeditionOutcomeType::BattleAliens->value => 'expedition_weight_aliens',
         ];
@@ -1125,6 +1125,7 @@ class FleetDispatchExpeditionTest extends FleetDispatchTestCase
             'expedition_weight_black_hole' => '0.2',
             'expedition_weight_dark_matter' => '7.5',
             'expedition_weight_merchant' => '0.4',
+            'expedition_weight_items' => '25',
             'expedition_weight_pirates' => '3',
             'expedition_weight_aliens' => '1.5',
         ];

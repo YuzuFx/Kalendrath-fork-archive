@@ -193,6 +193,16 @@ class ExpeditionItemLootTest extends FleetDispatchTestCase
         $this->assertGreaterThan(0.0, (new SettingsService())->expeditionWeightItems());
     }
 
+    public function testAlphaTuningReplacesOnlyThePreviousExpeditionItemWeight(): void
+    {
+        $migration = require base_path('database/migrations/2026_11_21_000003_tune_expedition_item_weight.php');
+        foreach (['5' => '25', '7' => '7', '0' => '0'] as $before => $after) {
+            DB::table('settings')->updateOrInsert(['key' => 'expedition_weight_items'], ['value' => (string) $before]);
+            $migration->up();
+            $this->assertSame($after, DB::table('settings')->where('key', 'expedition_weight_items')->value('value'));
+        }
+    }
+
     public function testNoEligibleItemFallsBackToAFailedExpedition(): void
     {
         $this->basicSetup();

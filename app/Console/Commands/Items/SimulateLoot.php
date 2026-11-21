@@ -30,15 +30,16 @@ use Random\Randomizer;
     {--archetype=warrior : Main hero archetype (warrior | sorcerer | none)}
     {--level=1 : Main hero level}
     {--per-hour= : Source events per real hour (default: config loot.simulation)}
+    {--weekly-hours=14 : Hours of active play per real week}
     {--seed=1 : Random seed (reproducible output)}
     {--locale=fr : Language of the item names (the alpha is in French)}')]
 class SimulateLoot extends Command
 {
     public function handle(SettingsService $settings, HeroEquipmentService $equipment): int
     {
-        app()->setLocale((string) $this->option('locale'));
-        $source = (string) $this->option('source');
-        $code = (string) ($this->option('table') ?: ($source === 'expedition' ? 'expedition.t1' : 'pve_camp.t' . (int) $this->option('tier')));
+        app()->setLocale($this->stringOption('locale'));
+        $source = $this->stringOption('source');
+        $code = $this->stringOption('table') ?: ($source === 'expedition' ? 'expedition.t1' : 'pve_camp.t' . (int) $this->option('tier'));
         if (!in_array($code, LootTable::codes(), true)) {
             $this->error('Unknown loot table: ' . $code . ' (known: ' . implode(', ', LootTable::codes()) . ').');
 
@@ -53,7 +54,7 @@ class SimulateLoot extends Command
             return Command::FAILURE;
         }
 
-        $archetype = (string) $this->option('archetype');
+        $archetype = $this->stringOption('archetype');
         $classes = [];
         foreach ($archetype === 'none' ? (array) config('heroes.alpha_archetypes') : [$archetype] as $name) {
             $classes = array_merge($classes, $equipment->allowedClasses((string) $name));
@@ -104,6 +105,8 @@ class SimulateLoot extends Command
         $rows = [];
         $byRarity = [];
         $bySlot = [];
+        $byLevel = [];
+        $wearableShare = 0.0;
         foreach ($pool as $entry) {
             $definition = $entry['definition'];
             $theoretical = $expected[$definition->code];
@@ -120,6 +123,14 @@ class SimulateLoot extends Command
                 sprintf('%.3f %%', 100 * $theoretical * $perEvent),
             ];
             $byRarity[$definition->rarity] = [($byRarity[$definition->rarity][0] ?? 0.0) + $theoretical, ($byRarity[$definition->rarity][1] ?? 0.0) + $share];
+            $requiredLevel = $definition->required_level;
+            $byLevel[$requiredLevel] = [
+                ($byLevel[$requiredLevel][0] ?? 0.0) + $theoretical,
+                ($byLevel[$requiredLevel][1] ?? 0.0) + $share,
+            ];
+            if ($requiredLevel <= $level) {
+                $wearableShare += $theoretical;
+            }
             $slot = (string) $definition->slot_type?->value;
             $bySlot[$slot] = [($bySlot[$slot][0] ?? 0.0) + $theoretical, ($bySlot[$slot][1] ?? 0.0) + $share];
         }
@@ -138,26 +149,49 @@ class SimulateLoot extends Command
             $bySlot,
         ));
 
+        ksort($byLevel);
+        $this->table(['Required level', 'Share (theory)', 'Share (observed)'], array_map(
+            fn (int $requiredLevel, array $shares) => [$requiredLevel, sprintf('%.2f %%', 100 * $shares[0]), sprintf('%.2f %%', 100 * $shares[1])],
+            array_keys($byLevel),
+            $byLevel,
+        ));
+
         $perHourOption = $this->option('per-hour');
         $eventsPerHour = $perHourOption !== null && $perHourOption !== ''
             ? (float) $perHourOption
             : (float) config('loot.simulation.events_per_hour.' . $table->source, 1.0);
-        $itemsPerHour = $eventsPerHour * $perEvent;
+        $itemsPerHour = max(0.0, $eventsPerHour) * $perEvent;
+        $weeklyHours = max(0.0, (float) $this->option('weekly-hours'));
+        $itemsPerWeek = $itemsPerHour * $weeklyHours;
+        $wearablePerHour = $wearableShare * $itemsPerHour;
 
         $this->line(sprintf('Items per source event: %.4f (theory), %.4f (observed over %d events, %d items)', $perEvent, $granted / $runs, $runs, $granted));
         $this->line(sprintf(
-            'At x5, %.2f %s per real hour: %.3f items per real hour, %.2f per 8 h of active play, 32 places filled in about %s h of active play.',
+            'At x5, %.2f %s per real hour: %.3f items per real hour, %.2f per week (%.1f active h).',
             $eventsPerHour,
             $table->source === 'expedition' ? 'expeditions' : 'victorious raids',
             $itemsPerHour,
-            $itemsPerHour * 8,
+            $itemsPerWeek,
+            $weeklyHours,
+        ));
+        $this->line(sprintf(
+            'First immediately wearable item (empty equipment): %s active h on average. 32 bag places (all drops kept in bag): %s active h, %s weeks.',
+            $wearablePerHour > 0 ? number_format(1 / $wearablePerHour, 1) : 'never',
             $itemsPerHour > 0 ? number_format(32 / $itemsPerHour, 1) : 'never',
+            $itemsPerWeek > 0 ? number_format(32 / $itemsPerWeek, 1) : 'never',
         ));
         if ($pool === []) {
             $this->warn('Empty pool for this profile: every roll would be "empty_pool".');
         }
 
         return Command::SUCCESS;
+    }
+
+    private function stringOption(string $name): string
+    {
+        $value = $this->option($name);
+
+        return is_string($value) ? $value : '';
     }
 
     /**

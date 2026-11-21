@@ -492,6 +492,6 @@ NOTE: The total strength of all participants compared to the total strength of d
     'pve_raid_item_found' => [
         'from' => 'Army Command',
         'subject' => 'Spoils of the camp :coordinates',
-        'body' => 'Your army has defeated the camp\'s garrison. Among the spoils, it found: :item. The item awaits you in the kingdom\'s inventory.',
+        'body' => 'Your army has defeated the camp\'s garrison. Among the spoils, it found: :item_code. The item awaits you in the kingdom\'s inventory.',
     ],
 ];
