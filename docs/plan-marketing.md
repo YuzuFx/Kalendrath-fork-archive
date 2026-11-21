@@ -25,7 +25,7 @@
 16. **La communication ne parle jamais de pay-to-win, ni de plafond, ni d'écart payeur** (décision du 2026-10-27). Un chiffre serait jugé trop élevé par les uns, et dissuaderait les joueurs qui aiment dépenser, qui y liraient un jeu sans enjeu. On le joue plus finement : **une boutique attrayante**, qui accélère réellement le joueur payant, et **un contenu intéressant et exigeant pour le joueur gratuit**. Pour les events PvP, les **ligues de niveaux** répartissent les joueurs par tranche.
 17. **Achats faits pendant la bêta : +30 % de Kaelite offerte sur tout achat** (proposition de Gregory du 2026-10-28, qui remplace la restitution d'un tiers en fin de bêta). La Kaelite est liée au compte : ce qui n'est pas dépensé reste après la remise à zéro (voir 8).
 18. **Récompenses du classement de bêta : titres et effets cosmétiques**, mis en avant par le classement, plus de **petits bonus** ou **un pass de saison premium offert** pour les meilleurs.
-19. **Les dates sont des engagements.** Les joueurs n'aiment pas les dates floues ni repoussées : on annonce une date seulement quand on peut la tenir, et on la tient.
+19. **Les dates précises sont des engagements ; les mois sont des intentions** *(amendée le 2026-11-19)*. Les joueurs n'aiment pas les dates floues ni repoussées. On distingue donc deux niveaux. **Une feuille de route publique annonce des mois, ou des fourchettes de deux mois** (« mars 2027 », « mars/avril 2027 »), jamais de trimestre ni de jour précis, présentés comme des intentions qui peuvent bouger. **Une date précise** (jour de la bêta, de la sortie) n'est annoncée que lorsqu'on peut la tenir, et on la tient : cela se fait **à la fin de l'alpha**. La bêta est d'abord annoncée par une **période approximative** ; l'ouverture des préinscriptions est annoncée environ **un mois plus tard**. Aucune date d'ouverture de l'alpha n'est annoncée à l'avance.
 
 **Ajouts du 2026-10-28 :**
 
@@ -72,7 +72,7 @@ L'économie de la boutique : ni « pay-to-win », ni « pas de pay-to-win », ni
 
 ### Ce qu'on ne promet pas
 
-Aucune date avant les préinscriptions, et ensuite aucune date qu'on ne soit sûr de tenir ; aucune modalité de fusion irréversible ; aucune fonctionnalité marquée « plus tard ».
+**Amendé le 2026-11-21 : la date de l'alpha fermée (14 janvier 2027) est publique.** Aucune autre date précise avant la fin de l'alpha (des mois et des fourchettes de deux mois sont publiés dans la feuille de route, cf. décision 19), et ensuite aucune date qu'on ne soit sûr de tenir ; aucune modalité de fusion irréversible ; aucune fonctionnalité marquée « plus tard ».
 
 ---
 
@@ -247,7 +247,7 @@ L'ordre décidé par Gregory, avec ce que fait la communication à chaque étape
 
 | # | Étape | Version | Communication | Ce qu'on annonce |
 |---|---|---|---|---|
-| 1 | **Communication sur le projet** | — | Vitrine, Discord, devlog toutes les deux semaines, feuille de route publique, avancement, **sondages participatifs** (rythme, format, noms…), premiers posts Reddit et X | Des jalons, jamais de dates |
+| 1 | **Communication sur le projet** | — | Vitrine, Discord, devlog toutes les deux semaines, feuille de route publique, avancement, **sondages participatifs** (rythme, format, noms…), premiers posts Reddit et X | Des jalons par mois ou fourchette de deux mois, jamais de jour précis ni de trimestre |
 | 2 | **Lancement de l'alpha fermée** | `0.1` à `0.4` | Vagues de testeurs depuis la liste, en priorité les profils et la langue qui manquent. Ouverture des salons de notes de version. Formulaire de fin de vague | « L'alpha est ouverte », sans date de fin |
 | 3 | **Ouverture du Patreon** | pendant l'alpha | News et e-mail : « Si ce que vous voyez vous donne envie de soutenir le développement ». Afficher ce que l'argent finance | Ce que les soutiens reçoivent |
 | 4 | **Ouverture des préinscriptions à la bêta, avec date** | fin d'alpha | Campagne sur toutes les communautés qui acceptent du jouable (r/playmygame, r/IndieGaming, Discord « Serveur Privé »), e-mail à toute la liste, kit de presse, teaser. Bonus des préinscrits annoncés | **La date de la bêta et sa durée** |

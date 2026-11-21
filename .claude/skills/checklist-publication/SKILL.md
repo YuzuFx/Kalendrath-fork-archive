@@ -22,7 +22,7 @@ Cadre : [docs/plan-marketing.md](../../../docs/plan-marketing.md) (sections 3, 5
 - [ ] Noms de jeu conformes à `lexique-kalendrath` ; aucun nom inventé (sinon **[TBD]** ou « provisoire »).
 - [ ] Aucune mécanique **[TBD]** du GDD annoncée comme acquise ; rien qui relève de « plus tard ».
 - [ ] Chiffres vérifiés contre le code, le GDD ou le simulateur ; équilibrage en « ancienne -> nouvelle valeur ».
-- [ ] Aucune date promise avant les préinscriptions ; après, date tenue avec sa marge.
+- [ ] Aucune date précise promise avant la fin de l'alpha (des mois ou fourchettes de deux mois sont permis, présentés comme des intentions, décision 19 amendée le 2026-11-19) ; après, date tenue avec sa marge.
 - [ ] Mention de l'IA générative cohérente avec la transparence voulue, si des visuels IA sont utilisés.
 
 ## 4. Liens et visuels
